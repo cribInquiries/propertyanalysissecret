@@ -159,15 +159,29 @@ const CompanyPortfolio = () => {
     }))
   }
 
-  const handleImageUpload = (id: number, event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (id: number, event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        const result = e.target?.result as string
-        updateProperty(id, "image", result)
+    if (!file) return
+    try {
+      const form = new FormData()
+      const user = getCurrentUser()
+      form.append("file", file)
+      form.append("userId", user?.id || "anon")
+      form.append("folder", "portfolio")
+
+      const res = await fetch("/api/upload", { method: "POST", body: form })
+      if (!res.ok) throw new Error("Upload failed")
+      const { url } = await res.json()
+      updateProperty(id, "image", url)
+      // persist immediately
+      const next = {
+        ...editableData,
+        portfolioProperties: editableData.portfolioProperties.map((p) => (p.id === id ? { ...p, image: url } : p)),
       }
-      reader.readAsDataURL(file)
+      writeJson(STORAGE_KEY, next)
+      await remoteSave(user?.id || "anon", "company_portfolio", next)
+    } catch (e) {
+      console.error("Upload error", e)
     }
   }
 

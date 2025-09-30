@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { X, Upload, ImageIcon } from "lucide-react"
 import { readJson, writeJson, generateId, getCurrentUser } from "@/lib/local-db"
+import { remoteSave } from "@/lib/remote-store"
 import { toast } from "@/hooks/use-toast"
 
 interface ImageUploadProps {
@@ -125,6 +126,7 @@ export function ImageUpload({
           const existing = readJson<StoredImage[]>(STORAGE_KEY, [])
           const next = [...existing, imageRecord]
           writeJson(STORAGE_KEY, next)
+          remoteSave(imageRecord.user_id, STORAGE_KEY, next).catch(() => {})
 
           setUploadingFiles((prev) => prev.filter((f) => f.id !== id))
           setUploadedImages((prev) => [...prev, imageRecord])
@@ -164,10 +166,9 @@ export function ImageUpload({
       const user = getCurrentUser()
       const STORAGE_KEY = `property_images_${user?.id || "anon"}`
       const existing = readJson<StoredImage[]>(STORAGE_KEY, [])
-      writeJson(
-        STORAGE_KEY,
-        existing.filter((img) => img.id !== imageId),
-      )
+      const next = existing.filter((img) => img.id !== imageId)
+      writeJson(STORAGE_KEY, next)
+      remoteSave(user?.id || "anon", STORAGE_KEY, next).catch(() => {})
       toast({
         title: "Image removed",
         description: "Image deleted successfully",
