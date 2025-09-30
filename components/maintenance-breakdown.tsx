@@ -127,6 +127,15 @@ export function MaintenanceBreakdown() {
     writeJson(STORAGE_KEY, editableData)
   }
 
+  // Auto-persist maintenance edits
+  useEffect(() => {
+    const id = setTimeout(() => {
+      writeJson(STORAGE_KEY, editableData)
+    }, 500)
+    return () => clearTimeout(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editableData])
+
   const handleCancel = () => {
     setIsEditing(false)
     setEditableData(originalData)

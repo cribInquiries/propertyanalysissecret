@@ -133,6 +133,23 @@ export function ValueMaximization() {
     writeJson(STORAGE_KEY, toStore)
   }
 
+  // Auto-persist edits (serialize-only) to avoid data loss without clicking Save
+  useEffect(() => {
+    const id = setTimeout(() => {
+      const toStore = {
+        valueAddons: editableData.valueAddons.map(({ title, impact, description, cost }) => ({
+          title,
+          impact,
+          description,
+          cost,
+        })),
+      }
+      writeJson(STORAGE_KEY, toStore)
+    }, 500)
+    return () => clearTimeout(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editableData])
+
   const handleCancel = () => {
     setIsEditing(false)
     setEditableData(originalData)
