@@ -90,6 +90,7 @@ export function ValueMaximization() {
 
   const userId = getCurrentUser()?.id || "anon"
   const STORAGE_KEY = `value_maximization_${userId}`
+  const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
     const stored = readJson<Partial<typeof initialData> | null>(STORAGE_KEY, null)
@@ -112,6 +113,7 @@ export function ValueMaximization() {
       setEditableData(merged)
       setOriginalData(merged)
     }
+    setLoaded(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -135,6 +137,7 @@ export function ValueMaximization() {
 
   // Auto-persist edits (serialize-only) to avoid data loss without clicking Save
   useEffect(() => {
+    if (!loaded) return
     const id = setTimeout(() => {
       const toStore = {
         valueAddons: editableData.valueAddons.map(({ title, impact, description, cost }) => ({
@@ -148,7 +151,7 @@ export function ValueMaximization() {
     }, 500)
     return () => clearTimeout(id)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editableData])
+  }, [editableData, loaded])
 
   const handleCancel = () => {
     setIsEditing(false)

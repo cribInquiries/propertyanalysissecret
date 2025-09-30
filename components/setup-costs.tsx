@@ -52,23 +52,27 @@ export function SetupCosts() {
   const userId = getCurrentUser()?.id || "anon"
   const STORAGE_KEY = `setup_costs_${userId}`
 
+  const [loaded, setLoaded] = useState(false)
+
   useEffect(() => {
     const stored = readJson<typeof editableData | null>(STORAGE_KEY, null)
     if (stored) {
       setEditableData(stored)
       setOriginalData(stored)
     }
+    setLoaded(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Auto-persist any changes to setup data (including design edits)
   useEffect(() => {
+    if (!loaded) return
     const id = setTimeout(() => {
       writeJson(STORAGE_KEY, editableData)
     }, 500)
     return () => clearTimeout(id)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editableData])
+  }, [editableData, loaded])
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 

@@ -56,6 +56,7 @@ const CompanyPortfolio = () => {
 
   const userId = getCurrentUser()?.id || "anon"
   const STORAGE_KEY = `company_portfolio_${userId}`
+  const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
     const stored = readJson<typeof editableData | null>(STORAGE_KEY, null)
@@ -63,6 +64,7 @@ const CompanyPortfolio = () => {
       setEditableData(stored)
       setOriginalData(stored)
     }
+    setLoaded(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -97,12 +99,13 @@ const CompanyPortfolio = () => {
 
   // Auto-persist portfolio edits
   useEffect(() => {
+    if (!loaded) return
     const id = setTimeout(() => {
       writeJson(STORAGE_KEY, editableData)
     }, 500)
     return () => clearTimeout(id)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editableData])
+  }, [editableData, loaded])
 
   const handleCancel = () => {
     setIsEditing(false)

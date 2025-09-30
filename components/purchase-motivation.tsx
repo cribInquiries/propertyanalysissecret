@@ -49,6 +49,7 @@ export function PurchaseMotivation() {
   const [isEditing, setIsEditing] = useState(false)
   const [editData, setEditData] = useState<MotivationData>(defaultData)
   const [newGoal, setNewGoal] = useState("")
+  const [loaded, setLoaded] = useState(false)
 
   const userId = getCurrentUser()?.id || "anon"
   const STORAGE_KEY = `purchase_motivation_${userId}`
@@ -59,6 +60,7 @@ export function PurchaseMotivation() {
       setData(stored)
       setEditData(stored)
     }
+    setLoaded(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

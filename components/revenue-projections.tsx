@@ -51,6 +51,7 @@ export function RevenueProjections() {
 
   const userId = getCurrentUser()?.id || "anon"
   const STORAGE_KEY = `revenue_projections_${userId}`
+  const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
     const stored = readJson<typeof editableData | null>(STORAGE_KEY, null)
@@ -58,6 +59,7 @@ export function RevenueProjections() {
       setEditableData(stored)
       setOriginalData(stored)
     }
+    setLoaded(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -199,12 +201,13 @@ export function RevenueProjections() {
 
   // Auto-persist revenue edits
   useEffect(() => {
+    if (!loaded) return
     const id = setTimeout(() => {
       writeJson(STORAGE_KEY, editableData)
     }, 500)
     return () => clearTimeout(id)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editableData])
+  }, [editableData, loaded])
 
   const handleCancel = () => {
     setIsEditing(false)
