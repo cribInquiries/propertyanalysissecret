@@ -165,7 +165,7 @@ export function SetupCosts() {
       form.append("userId", user?.id || "anon")
       form.append("folder", "design-inspiration")
 
-      const res = await fetch("/api/upload", { method: "POST", body: form })
+      const res = await fetch("/api/upload", { method: "POST", body: form, cache: "no-store" })
       if (!res.ok) throw new Error("Upload failed")
       const { url } = await res.json()
       updateDesignInspiration(id, "image", url)

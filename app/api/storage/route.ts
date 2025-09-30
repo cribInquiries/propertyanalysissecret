@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server"
 import { put, list } from "@vercel/blob"
 
+export const runtime = "edge"
+export const dynamic = "force-dynamic"
+export const maxDuration = 60
+
 export async function PUT(request: Request) {
   try {
     const { userId, key, data } = await request.json()

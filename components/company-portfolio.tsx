@@ -169,7 +169,7 @@ const CompanyPortfolio = () => {
       form.append("userId", user?.id || "anon")
       form.append("folder", "portfolio")
 
-      const res = await fetch("/api/upload", { method: "POST", body: form })
+      const res = await fetch("/api/upload", { method: "POST", body: form, cache: "no-store" })
       if (!res.ok) throw new Error("Upload failed")
       const { url } = await res.json()
       updateProperty(id, "image", url)
