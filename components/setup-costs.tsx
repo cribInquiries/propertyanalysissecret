@@ -61,6 +61,15 @@ export function SetupCosts() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Auto-persist any changes to setup data (including design edits)
+  useEffect(() => {
+    const id = setTimeout(() => {
+      writeJson(STORAGE_KEY, editableData)
+    }, 500)
+    return () => clearTimeout(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editableData])
+
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const totalRenovation = editableData.renovationItems.reduce((sum, item) => sum + item.cost, 0)
