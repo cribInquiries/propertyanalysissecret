@@ -1,22 +1,33 @@
 "use client"
 
 import { motion } from "framer-motion"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Edit, Save, X } from "lucide-react"
+import { readJson, writeJson } from "@/lib/local-db"
 
 export function PropertyHero() {
   const [isEditing, setIsEditing] = useState(false)
-  const [heroData, setHeroData] = useState({
+  const HERO_DATA_KEY = "ui_hero_data"
+  const defaultHero = {
     propertyName: "The Adelaide Hills Retreat",
     clientName: "Sarah & Michael Thompson",
     address: "123 Scenic Drive, Adelaide Hills, SA 5152",
     backgroundImage: "/luxury-property-aerial.png",
-  })
-  const [originalData, setOriginalData] = useState(heroData)
+  }
+  const [heroData, setHeroData] = useState(defaultHero)
+  const [originalData, setOriginalData] = useState(defaultHero)
+
+  useEffect(() => {
+    const stored = readJson<typeof defaultHero>(HERO_DATA_KEY, defaultHero)
+    setHeroData(stored)
+    setOriginalData(stored)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleSave = () => {
+    writeJson(HERO_DATA_KEY, heroData)
     setOriginalData(heroData)
     setIsEditing(false)
   }
@@ -27,14 +38,15 @@ export function PropertyHero() {
   }
 
   return (
-    <section className="relative min-h-screen flex items-center justify-center bg-gradient-to-br from-primary via-primary/90 to-primary/80 text-primary-foreground overflow-hidden">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-10">
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: `url('${heroData.backgroundImage}')` }}
-        />
-      </div>
+    <section className="relative min-h-screen flex items-center justify-center text-white overflow-hidden">
+      {/* Background Image (full-bleed) */}
+      <img
+        src={heroData.backgroundImage}
+        alt="Property backdrop"
+        className="absolute inset-0 w-full h-full object-cover object-center scale-105"
+      />
+      {/* Soft vignette to improve text contrast while keeping image visible */}
+      <div className="absolute inset-0 bg-black/35 md:bg-black/30" />
 
       <motion.div
         initial={{ opacity: 0 }}
@@ -71,18 +83,9 @@ export function PropertyHero() {
         )}
       </motion.div>
 
-      <motion.div
-        className="absolute top-20 left-20 w-32 h-32 border border-white/20 rounded-full"
-        animate={{ rotate: 360 }}
-        transition={{ duration: 20, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
-      />
-      <motion.div
-        className="absolute bottom-20 right-20 w-24 h-24 border border-white/30 rounded-full"
-        animate={{ rotate: -360 }}
-        transition={{ duration: 15, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
-      />
+      {/* Decorative orbs removed to keep photo unobstructed */}
 
-      <div className="relative z-10 text-center max-w-4xl mx-auto px-6">
+      <div className="relative z-10 text-center max-w-5xl mx-auto px-6">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -90,7 +93,7 @@ export function PropertyHero() {
           className="mb-8"
         >
           <div className="inline-flex items-center justify-center mb-4">
-            <img src="/luxe-logo.png" alt="Luxe Managements Logo" className="h-64 w-auto" />
+            <img src="/luxe-logo.png" alt="Luxe Managements Logo" className="h-24 md:h-28 w-auto drop-shadow-lg" />
           </div>
         </motion.div>
 
@@ -108,7 +111,9 @@ export function PropertyHero() {
               placeholder="Property Name"
             />
           ) : (
-            <h1 className="text-5xl md:text-7xl font-bold text-balance">{heroData.propertyName}</h1>
+            <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight drop-shadow-[0_2px_12px_rgba(0,0,0,0.45)] text-balance">
+              {heroData.propertyName}
+            </h1>
           )}
         </motion.div>
 
@@ -126,7 +131,7 @@ export function PropertyHero() {
               placeholder="Property Address"
             />
           ) : (
-            <p className="text-lg md:text-xl text-primary-foreground/80">{heroData.address}</p>
+            <p className="text-lg md:text-xl text-white/90 drop-shadow-[0_2px_8px_rgba(0,0,0,0.4)]">{heroData.address}</p>
           )}
         </motion.div>
 
@@ -138,7 +143,7 @@ export function PropertyHero() {
         >
           {isEditing ? (
             <div className="text-xl md:text-2xl text-center">
-              <span className="text-primary-foreground/80">Prepared exclusively for </span>
+              <span className="text-white/85">Prepared exclusively for </span>
               <Input
                 value={heroData.clientName}
                 onChange={(e) => setHeroData({ ...heroData, clientName: e.target.value })}
@@ -147,7 +152,7 @@ export function PropertyHero() {
               />
             </div>
           ) : (
-            <p className="text-xl md:text-2xl text-primary-foreground/80">
+            <p className="text-xl md:text-2xl text-white/85 drop-shadow-[0_2px_8px_rgba(0,0,0,0.35)]">
               Prepared exclusively for <span className="text-white font-semibold">{heroData.clientName}</span>
             </p>
           )}
@@ -157,14 +162,14 @@ export function PropertyHero() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.9 }}
-          className="text-lg md:text-xl text-primary-foreground/70 max-w-2xl mx-auto"
+          className="text-lg md:text-xl text-white/80 max-w-2xl mx-auto"
         >
           <p className="mb-4">Comprehensive Airbnb Property Analysis</p>
-          <div className="w-24 h-1 bg-white mx-auto rounded-full" />
+          <div className="w-24 h-1 bg-white/90 mx-auto rounded-full" />
 
           {isEditing && (
             <div className="mt-6">
-              <label className="block text-sm font-medium text-white/80 mb-2">Background Image URL</label>
+              <label className="block text-sm font-medium text-white/90 mb-2">Background Image URL</label>
               <Input
                 value={heroData.backgroundImage}
                 onChange={(e) => setHeroData({ ...heroData, backgroundImage: e.target.value })}

@@ -16,6 +16,7 @@ import {
 } from "@/lib/hooks/use-property-analysis"
 import { useUserSettings } from "@/lib/hooks/use-user-settings"
 import { ImageUpload } from "@/components/image-upload"
+import { readJson, writeJson, getCurrentUser } from "@/lib/local-db"
 import { Heart, Save, Trash2, Plus, X } from "lucide-react"
 
 interface PropertyAnalysisFormProps {
@@ -52,6 +53,23 @@ export function PropertyAnalysisForm({ analysis, onSave, onCancel }: PropertyAna
     },
   })
 
+  // Persist draft locally (per-user, per-analysis) so changes are never lost
+  const draftKey = (() => {
+    const user = getCurrentUser()
+    const userId = user?.id || "anon"
+    const baseId = analysis?.id || "new"
+    return `analysis_draft_${userId}_${baseId}`
+  })()
+
+  // Load existing draft on mount
+  useEffect(() => {
+    const draft = readJson<typeof formData>(draftKey, null as any)
+    if (draft) {
+      setFormData(draft)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // Auto-save functionality
   useEffect(() => {
     if (analysis && settings?.analysis_preferences?.auto_save) {
@@ -62,6 +80,15 @@ export function PropertyAnalysisForm({ analysis, onSave, onCancel }: PropertyAna
       return () => clearTimeout(timeoutId)
     }
   }, [formData.analysis_data, analysis, settings, autoSaveAnalysis])
+
+  // Always persist full form draft locally on any change (debounced)
+  useEffect(() => {
+    const id = setTimeout(() => {
+      writeJson(draftKey, formData)
+    }, 400)
+    return () => clearTimeout(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData])
 
   // Calculate metrics
   const calculateMetrics = () => {
@@ -157,6 +184,12 @@ export function PropertyAnalysisForm({ analysis, onSave, onCancel }: PropertyAna
       }
 
       if (savedAnalysis) {
+        // Clear temporary draft and persist under the real id
+        const user = getCurrentUser()
+        const userId = user?.id || "anon"
+        const savedKey = `analysis_draft_${userId}_${savedAnalysis.id}`
+        writeJson(savedKey, { ...formData, ...savedAnalysis })
+        writeJson(draftKey, null as any)
         onSave?.(savedAnalysis)
       }
     } catch (error) {

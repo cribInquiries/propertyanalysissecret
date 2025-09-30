@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { useDropzone } from "react-dropzone"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -23,6 +23,19 @@ interface UploadingFile {
   id: string
 }
 
+interface StoredImage {
+  id: string
+  user_id: string
+  property_analysis_id: string | null
+  file_name: string
+  file_path: string
+  file_size: number
+  mime_type: string
+  upload_status: "completed" | "error" | "uploading"
+  publicUrl: string
+  alt_text?: string
+}
+
 export function ImageUpload({
   onUploadComplete,
   propertyAnalysisId,
@@ -30,7 +43,15 @@ export function ImageUpload({
   maxSize = 5 * 1024 * 1024, // 5MB
 }: ImageUploadProps) {
   const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([])
-  const [uploadedImages, setUploadedImages] = useState<any[]>([])
+  const [uploadedImages, setUploadedImages] = useState<StoredImage[]>([])
+
+  // Load previously saved images for this user on mount
+  useEffect(() => {
+    const user = getCurrentUser()
+    const STORAGE_KEY = `property_images_${user?.id || "anon"}`
+    const existing = readJson<StoredImage[]>(STORAGE_KEY, [])
+    setUploadedImages(existing)
+  }, [])
 
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
@@ -88,7 +109,7 @@ export function ImageUpload({
             reader.readAsDataURL(file)
           })
 
-          const imageRecord = {
+          const imageRecord: StoredImage = {
             id: generateId(),
             user_id: user?.id || "anon",
             property_analysis_id: propertyAnalysisId || null,
@@ -101,7 +122,7 @@ export function ImageUpload({
           }
 
           const STORAGE_KEY = `property_images_${imageRecord.user_id}`
-          const existing = readJson<any[]>(STORAGE_KEY, [])
+          const existing = readJson<StoredImage[]>(STORAGE_KEY, [])
           const next = [...existing, imageRecord]
           writeJson(STORAGE_KEY, next)
 
@@ -142,7 +163,7 @@ export function ImageUpload({
       setUploadedImages((prev) => prev.filter((img) => img.id !== imageId))
       const user = getCurrentUser()
       const STORAGE_KEY = `property_images_${user?.id || "anon"}`
-      const existing = readJson<any[]>(STORAGE_KEY, [])
+      const existing = readJson<StoredImage[]>(STORAGE_KEY, [])
       writeJson(
         STORAGE_KEY,
         existing.filter((img) => img.id !== imageId),
