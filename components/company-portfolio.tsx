@@ -182,6 +182,22 @@ const CompanyPortfolio = () => {
       await remoteSave(user?.id || "anon", "company_portfolio", next)
     } catch (e) {
       console.error("Upload error", e)
+      // Fallback to data URL so UI updates even if remote fails
+      try {
+        const reader = new FileReader()
+        reader.onload = () => {
+          const dataUrl = reader.result as string
+          updateProperty(id, "image", dataUrl)
+          const next = {
+            ...editableData,
+            portfolioProperties: editableData.portfolioProperties.map((p) =>
+              p.id === id ? { ...p, image: dataUrl } : p,
+            ),
+          }
+          writeJson(STORAGE_KEY, next)
+        }
+        reader.readAsDataURL(file)
+      } catch {}
     }
   }
 

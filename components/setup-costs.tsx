@@ -171,6 +171,15 @@ export function SetupCosts() {
       updateDesignInspiration(id, "image", url)
     } catch (e) {
       console.error("Upload error", e)
+      // Fallback: embed as data URL so it still persists locally/remotely
+      try {
+        const reader = new FileReader()
+        reader.onload = () => {
+          const dataUrl = reader.result as string
+          updateDesignInspiration(id, "image", dataUrl)
+        }
+        reader.readAsDataURL(file)
+      } catch {}
     }
   }
 
