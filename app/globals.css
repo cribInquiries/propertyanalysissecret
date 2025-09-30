@@ -1,0 +1,127 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* Updated color tokens to use only navy and white, removing gold */
+  --background: oklch(1 0 0); /* White background */
+  --foreground: oklch(0.2 0.05 240); /* Dark navy text */
+  --card: oklch(0.98 0 0); /* Light gray card background */
+  --card-foreground: oklch(0.2 0.05 240); /* Dark navy card text */
+  --popover: oklch(1 0 0); /* White popover */
+  --popover-foreground: oklch(0.2 0.05 240); /* Dark navy popover text */
+  --primary: oklch(0.2 0.05 240); /* Dark navy primary */
+  --primary-foreground: oklch(1 0 0); /* White primary text */
+  --secondary: oklch(0.95 0 0); /* Light gray secondary instead of gold */
+  --secondary-foreground: oklch(0.2 0.05 240); /* Dark navy secondary text */
+  --muted: oklch(0.98 0 0); /* Light gray muted */
+  --muted-foreground: oklch(0.5 0 0); /* Gray muted text */
+  --accent: oklch(0.3 0.05 240); /* Darker navy accent instead of gold */
+  --accent-foreground: oklch(1 0 0); /* White accent text */
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.577 0.245 27.325);
+  --border: oklch(0.9 0 0); /* Light border */
+  --input: oklch(1 0 0); /* White input */
+  --ring: oklch(0.2 0.05 240 / 0.5); /* Navy ring instead of gold */
+  --chart-1: oklch(0.2 0.05 240); /* Navy chart colors */
+  --chart-2: oklch(0.4 0.05 240);
+  --chart-3: oklch(0.6 0.05 240);
+  --chart-4: oklch(0.8 0.05 240);
+  --chart-5: oklch(0.5 0.05 240);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.98 0 0);
+  --sidebar-foreground: oklch(0.2 0.05 240);
+  --sidebar-primary: oklch(0.2 0.05 240);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.3 0.05 240); /* Navy accent instead of gold */
+  --sidebar-accent-foreground: oklch(1 0 0);
+  --sidebar-border: oklch(0.9 0 0);
+  --sidebar-ring: oklch(0.2 0.05 240 / 0.5); /* Navy ring */
+}
+
+.dark {
+  /* Updated dark mode tokens to use only navy and white */
+  --background: oklch(0.2 0.05 240); /* Dark navy background */
+  --foreground: oklch(1 0 0); /* White text */
+  --card: oklch(0.25 0.05 240); /* Slightly lighter navy cards */
+  --card-foreground: oklch(1 0 0); /* White card text */
+  --popover: oklch(0.2 0.05 240); /* Dark navy popover */
+  --popover-foreground: oklch(1 0 0); /* White popover text */
+  --primary: oklch(1 0 0); /* White primary */
+  --primary-foreground: oklch(0.2 0.05 240); /* Dark navy primary text */
+  --secondary: oklch(0.15 0.05 240); /* Darker navy secondary instead of gold */
+  --secondary-foreground: oklch(1 0 0); /* White secondary text */
+  --muted: oklch(0.3 0.05 240); /* Muted navy */
+  --muted-foreground: oklch(0.7 0 0); /* Light gray muted text */
+  --accent: oklch(1 0 0); /* White accent instead of gold */
+  --accent-foreground: oklch(0.2 0.05 240); /* Navy accent text */
+  --destructive: oklch(0.396 0.141 25.723);
+  --destructive-foreground: oklch(0.637 0.237 25.331);
+  --border: oklch(0.3 0.05 240); /* Navy border */
+  --input: oklch(0.25 0.05 240); /* Navy input */
+  --ring: oklch(1 0 0 / 0.5); /* White ring instead of gold */
+  --chart-1: oklch(1 0 0); /* White/navy chart colors */
+  --chart-2: oklch(0.8 0 0);
+  --chart-3: oklch(0.6 0 0);
+  --chart-4: oklch(0.4 0 0);
+  --chart-5: oklch(0.7 0 0);
+  --sidebar: oklch(0.25 0.05 240);
+  --sidebar-foreground: oklch(1 0 0);
+  --sidebar-primary: oklch(1 0 0); /* White primary instead of gold */
+  --sidebar-primary-foreground: oklch(0.2 0.05 240);
+  --sidebar-accent: oklch(0.3 0.05 240);
+  --sidebar-accent-foreground: oklch(1 0 0);
+  --sidebar-border: oklch(0.3 0.05 240);
+  --sidebar-ring: oklch(1 0 0 / 0.5); /* White ring */
+}
+
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
