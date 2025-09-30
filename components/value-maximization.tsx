@@ -92,10 +92,25 @@ export function ValueMaximization() {
   const STORAGE_KEY = `value_maximization_${userId}`
 
   useEffect(() => {
-    const stored = readJson<typeof initialData | null>(STORAGE_KEY, null)
-    if (stored) {
-      setEditableData(stored)
-      setOriginalData(stored)
+    const stored = readJson<Partial<typeof initialData> | null>(STORAGE_KEY, null)
+    if (stored && Array.isArray(stored.valueAddons)) {
+      // Merge persisted addon content back into template to preserve icon components
+      const merged = {
+        valueAddons: initialData.valueAddons.map((addon, idx) => {
+          const saved = stored.valueAddons![idx] as any
+          if (!saved) return addon
+          return {
+            ...addon,
+            // only override primitive, serializable fields
+            title: saved.title ?? addon.title,
+            impact: typeof saved.impact === "number" ? saved.impact : addon.impact,
+            description: saved.description ?? addon.description,
+            cost: saved.cost ?? addon.cost,
+          }
+        }),
+      }
+      setEditableData(merged)
+      setOriginalData(merged)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -106,7 +121,16 @@ export function ValueMaximization() {
   const handleSave = () => {
     setIsEditing(false)
     setOriginalData(editableData)
-    writeJson(STORAGE_KEY, editableData)
+    // Persist only serializable fields; avoid storing icon components
+    const toStore = {
+      valueAddons: editableData.valueAddons.map(({ title, impact, description, cost }) => ({
+        title,
+        impact,
+        description,
+        cost,
+      })),
+    }
+    writeJson(STORAGE_KEY, toStore)
   }
 
   const handleCancel = () => {
