@@ -7,7 +7,8 @@ import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { MapPin, Award, Users, TrendingUp, Shield, Edit3, Save, X, Upload, Plus, Trash2 } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { readJson, writeJson, getCurrentUser } from "@/lib/local-db"
 
 const CompanyPortfolio = () => {
   const [isEditing, setIsEditing] = useState(false)
@@ -20,7 +21,7 @@ const CompanyPortfolio = () => {
         adr: 320,
         occupancy: 88,
         revenue: 103000,
-        image: "/luxury-adelaide-hills-retreat.png",
+        image: "/luxury-wine-country-estate-napa.png",
       },
       {
         id: 2,
@@ -29,7 +30,7 @@ const CompanyPortfolio = () => {
         adr: 280,
         occupancy: 92,
         revenue: 94000,
-        image: "/luxury-glenelg-beach-house.png",
+        image: "/luxury-oceanfront-villa-malibu.png",
       },
       {
         id: 3,
@@ -38,7 +39,7 @@ const CompanyPortfolio = () => {
         adr: 450,
         occupancy: 85,
         revenue: 140000,
-        image: "/luxury-barossa-valley-villa.png",
+        image: "/luxury-mountain-retreat-aspen.png",
       },
       {
         id: 4,
@@ -47,11 +48,23 @@ const CompanyPortfolio = () => {
         adr: 250,
         occupancy: 90,
         revenue: 82000,
-        image: "/luxury-north-adelaide-townhouse.png",
+        image: "/luxury-penthouse-miami-downtown.png",
       },
     ],
   })
   const [originalData, setOriginalData] = useState(editableData)
+
+  const userId = getCurrentUser()?.id || "anon"
+  const STORAGE_KEY = `company_portfolio_${userId}`
+
+  useEffect(() => {
+    const stored = readJson<typeof editableData | null>(STORAGE_KEY, null)
+    if (stored) {
+      setEditableData(stored)
+      setOriginalData(stored)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const achievements = [
     {
@@ -79,6 +92,7 @@ const CompanyPortfolio = () => {
   const handleSave = () => {
     setIsEditing(false)
     setOriginalData(editableData)
+    writeJson(STORAGE_KEY, editableData)
   }
 
   const handleCancel = () => {
@@ -230,7 +244,7 @@ const CompanyPortfolio = () => {
 
                   <div className="relative">
                     <img
-                      src={property.image || "/placeholder.svg"}
+                      src={property.image || "/placeholder.jpg"}
                       alt={property.name}
                       className="w-full h-64 object-cover"
                     />
