@@ -5,7 +5,8 @@ import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Waves, Bed, Home, TreePine, Star, Edit3, Save, X } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { readJson, writeJson, getCurrentUser } from "@/lib/local-db"
 
 export function MaintenanceBreakdown() {
   const [isEditing, setIsEditing] = useState(false)
@@ -37,6 +38,18 @@ export function MaintenanceBreakdown() {
     inspectionCostPerStay: 12,
   })
   const [originalData, setOriginalData] = useState(editableData)
+
+  const userId = getCurrentUser()?.id || "anon"
+  const STORAGE_KEY = `maintenance_breakdown_${userId}`
+
+  useEffect(() => {
+    const stored = readJson<typeof editableData | null>(STORAGE_KEY, null)
+    if (stored) {
+      setEditableData(stored)
+      setOriginalData(stored)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const poolCost = editableData.hasPool ? editableData.poolChemicalsCost + editableData.poolEquipmentMaintenance : 0
   const gardenCost = editableData.hasGarden ? editableData.gardenWaterCost + editableData.landscapingCost : 0
@@ -111,6 +124,7 @@ export function MaintenanceBreakdown() {
   const handleSave = () => {
     setIsEditing(false)
     setOriginalData(editableData)
+    writeJson(STORAGE_KEY, editableData)
   }
 
   const handleCancel = () => {

@@ -5,7 +5,8 @@ import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { DollarSign, Calendar, TrendingUp, Home, Edit3, Save, X } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { readJson, writeJson, getCurrentUser } from "@/lib/local-db"
 
 export function RevenueProjections() {
   const [isEditing, setIsEditing] = useState(false)
@@ -47,6 +48,18 @@ export function RevenueProjections() {
     ],
   })
   const [originalData, setOriginalData] = useState(editableData)
+
+  const userId = getCurrentUser()?.id || "anon"
+  const STORAGE_KEY = `revenue_projections_${userId}`
+
+  useEffect(() => {
+    const stored = readJson<typeof editableData | null>(STORAGE_KEY, null)
+    if (stored) {
+      setEditableData(stored)
+      setOriginalData(stored)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const monthlyData = [
     {
@@ -181,6 +194,7 @@ export function RevenueProjections() {
   const handleSave = () => {
     setIsEditing(false)
     setOriginalData(editableData)
+    writeJson(STORAGE_KEY, editableData)
   }
 
   const handleCancel = () => {

@@ -19,7 +19,8 @@ import {
   Plus,
   Trash2,
 } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { readJson, writeJson, getCurrentUser } from "@/lib/local-db"
 
 const initialData = {
   valueAddons: [
@@ -87,12 +88,25 @@ export function ValueMaximization() {
   const [editableData, setEditableData] = useState(initialData)
   const [originalData, setOriginalData] = useState(initialData)
 
+  const userId = getCurrentUser()?.id || "anon"
+  const STORAGE_KEY = `value_maximization_${userId}`
+
+  useEffect(() => {
+    const stored = readJson<typeof initialData | null>(STORAGE_KEY, null)
+    if (stored) {
+      setEditableData(stored)
+      setOriginalData(stored)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const totalPotentialIncrease = editableData.valueAddons.reduce((sum, addon) => sum + addon.impact, 0)
   const annualIncrease = totalPotentialIncrease * 365 * 0.82 // Assuming 82% occupancy
 
   const handleSave = () => {
     setIsEditing(false)
     setOriginalData(editableData)
+    writeJson(STORAGE_KEY, editableData)
   }
 
   const handleCancel = () => {

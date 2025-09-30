@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { readJson, writeJson, getCurrentUser } from "@/lib/local-db"
 import { motion } from "framer-motion"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -48,6 +49,18 @@ export function PurchaseMotivation() {
   const [isEditing, setIsEditing] = useState(false)
   const [editData, setEditData] = useState<MotivationData>(defaultData)
   const [newGoal, setNewGoal] = useState("")
+
+  const userId = getCurrentUser()?.id || "anon"
+  const STORAGE_KEY = `purchase_motivation_${userId}`
+
+  useEffect(() => {
+    const stored = readJson<MotivationData | null>(STORAGE_KEY, null)
+    if (stored) {
+      setData(stored)
+      setEditData(stored)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const calculatedLoanAmount = editData.financials.purchasePrice - editData.financials.totalDeposit
   if (calculatedLoanAmount !== editData.financials.loanAmount && calculatedLoanAmount >= 0) {
@@ -137,6 +150,7 @@ export function PurchaseMotivation() {
                 <Button
                   onClick={() => {
                     setData(editData)
+                    writeJson(STORAGE_KEY, editData)
                     setIsEditing(false)
                   }}
                   size="sm"

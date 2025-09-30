@@ -7,7 +7,8 @@ import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Palette, Sofa, Wrench, Camera, Edit3, Save, X, Upload, Plus, Trash2 } from "lucide-react"
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
+import { readJson, writeJson, getCurrentUser } from "@/lib/local-db"
 
 export function SetupCosts() {
   const [isEditing, setIsEditing] = useState(false)
@@ -48,6 +49,18 @@ export function SetupCosts() {
   })
   const [originalData, setOriginalData] = useState(editableData)
 
+  const userId = getCurrentUser()?.id || "anon"
+  const STORAGE_KEY = `setup_costs_${userId}`
+
+  useEffect(() => {
+    const stored = readJson<typeof editableData | null>(STORAGE_KEY, null)
+    if (stored) {
+      setEditableData(stored)
+      setOriginalData(stored)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const totalRenovation = editableData.renovationItems.reduce((sum, item) => sum + item.cost, 0)
@@ -57,11 +70,13 @@ export function SetupCosts() {
   const handleSave = () => {
     setIsEditing(false)
     setOriginalData(editableData)
+    writeJson(STORAGE_KEY, editableData)
   }
 
   const handleDesignSave = () => {
     setIsEditingDesign(false)
     setOriginalData(editableData)
+    writeJson(STORAGE_KEY, editableData)
   }
 
   const handleDesignCancel = () => {
