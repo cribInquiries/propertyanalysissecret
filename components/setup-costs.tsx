@@ -155,15 +155,22 @@ export function SetupCosts() {
     }))
   }
 
-  const handleImageUpload = (id: number, event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (id: number, event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        const result = e.target?.result as string
-        updateDesignInspiration(id, "image", result)
-      }
-      reader.readAsDataURL(file)
+    if (!file) return
+    try {
+      const form = new FormData()
+      const user = getCurrentUser()
+      form.append("file", file)
+      form.append("userId", user?.id || "anon")
+      form.append("folder", "design-inspiration")
+
+      const res = await fetch("/api/upload", { method: "POST", body: form })
+      if (!res.ok) throw new Error("Upload failed")
+      const { url } = await res.json()
+      updateDesignInspiration(id, "image", url)
+    } catch (e) {
+      console.error("Upload error", e)
     }
   }
 
