@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Palette, Sofa, Wrench, Camera, Edit3, Save, X, Upload, Plus, Trash2 } from "lucide-react"
 import { useState, useRef, useEffect } from "react"
 import { readJson, writeJson, getCurrentUser } from "@/lib/local-db"
+import { remoteLoad, remoteSave } from "@/lib/remote-store"
 
 export function SetupCosts() {
   const [isEditing, setIsEditing] = useState(false)
@@ -60,6 +61,13 @@ export function SetupCosts() {
       setEditableData(stored)
       setOriginalData(stored)
     }
+    remoteLoad<typeof editableData>(userId, "setup_costs").then((remote) => {
+      if (remote) {
+        setEditableData(remote)
+        setOriginalData(remote)
+        writeJson(STORAGE_KEY, remote)
+      }
+    }).catch(() => {})
     setLoaded(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -69,6 +77,7 @@ export function SetupCosts() {
     if (!loaded) return
     const id = setTimeout(() => {
       writeJson(STORAGE_KEY, editableData)
+      remoteSave(userId, "setup_costs", editableData).catch(() => {})
     }, 500)
     return () => clearTimeout(id)
     // eslint-disable-next-line react-hooks/exhaustive-deps

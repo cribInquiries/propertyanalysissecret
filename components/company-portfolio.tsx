@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { MapPin, Award, Users, TrendingUp, Shield, Edit3, Save, X, Upload, Plus, Trash2 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { readJson, writeJson, getCurrentUser } from "@/lib/local-db"
+import { remoteLoad, remoteSave } from "@/lib/remote-store"
 
 const CompanyPortfolio = () => {
   const [isEditing, setIsEditing] = useState(false)
@@ -64,6 +65,13 @@ const CompanyPortfolio = () => {
       setEditableData(stored)
       setOriginalData(stored)
     }
+    remoteLoad<typeof editableData>(userId, "company_portfolio").then((remote) => {
+      if (remote) {
+        setEditableData(remote)
+        setOriginalData(remote)
+        writeJson(STORAGE_KEY, remote)
+      }
+    }).catch(() => {})
     setLoaded(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -95,6 +103,7 @@ const CompanyPortfolio = () => {
     setIsEditing(false)
     setOriginalData(editableData)
     writeJson(STORAGE_KEY, editableData)
+    remoteSave(userId, "company_portfolio", editableData).catch(() => {})
   }
 
   // Auto-persist portfolio edits
@@ -102,6 +111,7 @@ const CompanyPortfolio = () => {
     if (!loaded) return
     const id = setTimeout(() => {
       writeJson(STORAGE_KEY, editableData)
+      remoteSave(userId, "company_portfolio", editableData).catch(() => {})
     }, 500)
     return () => clearTimeout(id)
     // eslint-disable-next-line react-hooks/exhaustive-deps

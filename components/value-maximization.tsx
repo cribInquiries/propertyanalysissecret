@@ -21,6 +21,7 @@ import {
 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { readJson, writeJson, getCurrentUser } from "@/lib/local-db"
+import { remoteLoad, remoteSave } from "@/lib/remote-store"
 
 const initialData = {
   valueAddons: [
@@ -113,6 +114,27 @@ export function ValueMaximization() {
       setEditableData(merged)
       setOriginalData(merged)
     }
+    // Try remote load as a fallback
+    remoteLoad<Partial<typeof initialData>>(userId, "value_maximization").then((remote) => {
+      if (remote && Array.isArray(remote.valueAddons)) {
+        const merged = {
+          valueAddons: initialData.valueAddons.map((addon, idx) => {
+            const saved = (remote as any).valueAddons?.[idx]
+            if (!saved) return addon
+            return {
+              ...addon,
+              title: saved.title ?? addon.title,
+              impact: typeof saved.impact === "number" ? saved.impact : addon.impact,
+              description: saved.description ?? addon.description,
+              cost: saved.cost ?? addon.cost,
+            }
+          }),
+        }
+        setEditableData(merged)
+        setOriginalData(merged)
+        writeJson(STORAGE_KEY, merged)
+      }
+    }).catch(() => {})
     setLoaded(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -133,6 +155,7 @@ export function ValueMaximization() {
       })),
     }
     writeJson(STORAGE_KEY, toStore)
+    remoteSave(userId, "value_maximization", toStore).catch(() => {})
   }
 
   // Auto-persist edits (serialize-only) to avoid data loss without clicking Save
@@ -148,6 +171,7 @@ export function ValueMaximization() {
         })),
       }
       writeJson(STORAGE_KEY, toStore)
+      remoteSave(userId, "value_maximization", toStore).catch(() => {})
     }, 500)
     return () => clearTimeout(id)
     // eslint-disable-next-line react-hooks/exhaustive-deps

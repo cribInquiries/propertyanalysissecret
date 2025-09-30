@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Waves, Bed, Home, TreePine, Star, Edit3, Save, X } from "lucide-react"
 import { useEffect, useState } from "react"
 import { readJson, writeJson, getCurrentUser } from "@/lib/local-db"
+import { remoteLoad, remoteSave } from "@/lib/remote-store"
 
 export function MaintenanceBreakdown() {
   const [isEditing, setIsEditing] = useState(false)
@@ -49,6 +50,13 @@ export function MaintenanceBreakdown() {
       setEditableData(stored)
       setOriginalData(stored)
     }
+    remoteLoad<typeof editableData>(userId, "maintenance_breakdown").then((remote) => {
+      if (remote) {
+        setEditableData(remote)
+        setOriginalData(remote)
+        writeJson(STORAGE_KEY, remote)
+      }
+    }).catch(() => {})
     setLoaded(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -134,6 +142,7 @@ export function MaintenanceBreakdown() {
     if (!loaded) return
     const id = setTimeout(() => {
       writeJson(STORAGE_KEY, editableData)
+      remoteSave(userId, "maintenance_breakdown", editableData).catch(() => {})
     }, 500)
     return () => clearTimeout(id)
     // eslint-disable-next-line react-hooks/exhaustive-deps

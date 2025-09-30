@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { readJson, writeJson, getCurrentUser } from "@/lib/local-db"
+import { remoteLoad, remoteSave } from "@/lib/remote-store"
 import { motion } from "framer-motion"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -60,6 +61,13 @@ export function PurchaseMotivation() {
       setData(stored)
       setEditData(stored)
     }
+    remoteLoad<MotivationData>(userId, "purchase_motivation").then((remote) => {
+      if (remote) {
+        setData(remote)
+        setEditData(remote)
+        writeJson(STORAGE_KEY, remote)
+      }
+    }).catch(() => {})
     setLoaded(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -153,6 +161,7 @@ export function PurchaseMotivation() {
                   onClick={() => {
                     setData(editData)
                     writeJson(STORAGE_KEY, editData)
+                    remoteSave(userId, "purchase_motivation", editData).catch(() => {})
                     setIsEditing(false)
                   }}
                   size="sm"

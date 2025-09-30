@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { DollarSign, Calendar, TrendingUp, Home, Edit3, Save, X } from "lucide-react"
 import { useEffect, useState } from "react"
 import { readJson, writeJson, getCurrentUser } from "@/lib/local-db"
+import { remoteLoad, remoteSave } from "@/lib/remote-store"
 
 export function RevenueProjections() {
   const [isEditing, setIsEditing] = useState(false)
@@ -59,6 +60,13 @@ export function RevenueProjections() {
       setEditableData(stored)
       setOriginalData(stored)
     }
+    remoteLoad<typeof editableData>(userId, "revenue_projections").then((remote) => {
+      if (remote) {
+        setEditableData(remote)
+        setOriginalData(remote)
+        writeJson(STORAGE_KEY, remote)
+      }
+    }).catch(() => {})
     setLoaded(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -204,6 +212,7 @@ export function RevenueProjections() {
     if (!loaded) return
     const id = setTimeout(() => {
       writeJson(STORAGE_KEY, editableData)
+      remoteSave(userId, "revenue_projections", editableData).catch(() => {})
     }, 500)
     return () => clearTimeout(id)
     // eslint-disable-next-line react-hooks/exhaustive-deps
