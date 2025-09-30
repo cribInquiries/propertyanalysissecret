@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { put } from "@vercel/blob"
 
-export const runtime = "edge"
+export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
 
