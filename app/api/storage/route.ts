@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { put, list } from "@vercel/blob"
 
-export const runtime = "nodejs"
+export const runtime = "edge"
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
 
@@ -13,12 +13,16 @@ export async function PUT(request: Request) {
     }
 
     const path = `userdata/${encodeURIComponent(userId)}/${encodeURIComponent(key)}.json`
+    const token = process.env.BLOB_READ_WRITE_TOKEN
+    if (!token) {
+      return NextResponse.json({ error: "Missing BLOB_READ_WRITE_TOKEN" }, { status: 500 })
+    }
     const result = await put(path, JSON.stringify(data ?? null), {
       access: "public",
       contentType: "application/json",
       // @ts-ignore - supported in recent @vercel/blob versions; prevents random suffix
       addRandomSuffix: false,
-      token: process.env.BLOB_READ_WRITE_TOKEN,
+      token,
     })
 
     return NextResponse.json({ url: result.url, path })
@@ -37,7 +41,11 @@ export async function GET(request: Request) {
     }
 
     const prefix = `userdata/${encodeURIComponent(userId)}/${encodeURIComponent(key)}.json`
-    const { blobs } = await list({ prefix, token: process.env.BLOB_READ_WRITE_TOKEN })
+    const token = process.env.BLOB_READ_WRITE_TOKEN
+    if (!token) {
+      return NextResponse.json({ error: "Missing BLOB_READ_WRITE_TOKEN" }, { status: 500 })
+    }
+    const { blobs } = await list({ prefix, token })
     if (!blobs || blobs.length === 0) {
       return new NextResponse("Not Found", { status: 404 })
     }
