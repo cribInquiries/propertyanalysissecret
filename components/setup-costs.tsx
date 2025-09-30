@@ -169,6 +169,13 @@ export function SetupCosts() {
       if (!res.ok) throw new Error("Upload failed")
       const { url } = await res.json()
       updateDesignInspiration(id, "image", url)
+      // Persist immediately so reloads keep the image
+      const next = {
+        ...editableData,
+        designInspirations: editableData.designInspirations.map((d) => (d.id === id ? { ...d, image: url } : d)),
+      }
+      writeJson(STORAGE_KEY, next)
+      await remoteSave(user?.id || "anon", "setup_costs", next)
     } catch (e) {
       console.error("Upload error", e)
       // Fallback: embed as data URL so it still persists locally/remotely
@@ -177,6 +184,13 @@ export function SetupCosts() {
         reader.onload = () => {
           const dataUrl = reader.result as string
           updateDesignInspiration(id, "image", dataUrl)
+          const next = {
+            ...editableData,
+            designInspirations: editableData.designInspirations.map((d) =>
+              d.id === id ? { ...d, image: dataUrl } : d,
+            ),
+          }
+          writeJson(STORAGE_KEY, next)
         }
         reader.readAsDataURL(file)
       } catch {}
