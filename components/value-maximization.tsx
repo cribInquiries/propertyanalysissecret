@@ -118,10 +118,8 @@ export function ValueMaximization() {
           cost: saved.cost ?? template.cost,
         }
       })
-      // If saved list is shorter, keep remaining template items
-      const merged = {
-        valueAddons: mergedList.length < base.length ? [...mergedList, ...base.slice(mergedList.length)] : mergedList,
-      }
+      // Respect deletions: do NOT append missing template items back
+      const merged = { valueAddons: mergedList }
       setEditableData(merged)
       setOriginalData(merged)
     }
@@ -149,7 +147,8 @@ export function ValueMaximization() {
             cost: saved.cost ?? template.cost,
           }
         })
-        const merged = { valueAddons: mergedList.length < base.length ? [...mergedList, ...base.slice(mergedList.length)] : mergedList }
+        // Respect deletions: do NOT append missing template items back
+        const merged = { valueAddons: mergedList }
         setEditableData(merged)
         setOriginalData(merged)
         writeJson(STORAGE_KEY, merged)
