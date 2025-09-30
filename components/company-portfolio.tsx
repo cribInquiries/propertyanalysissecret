@@ -132,13 +132,15 @@ const CompanyPortfolio = () => {
   }
 
   const addProperty = () => {
-    const newId = Math.max(...editableData.portfolioProperties.map((p) => p.id)) + 1
+    const nextId = editableData.portfolioProperties.length
+      ? Math.max(...editableData.portfolioProperties.map((p) => p.id)) + 1
+      : 1
     setEditableData((prev) => ({
       ...prev,
       portfolioProperties: [
         ...prev.portfolioProperties,
         {
-          id: newId,
+          id: nextId,
           name: "New Property",
           location: "Adelaide, SA",
           adr: 250,

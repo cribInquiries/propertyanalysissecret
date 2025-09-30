@@ -97,19 +97,30 @@ export function ValueMaximization() {
     const stored = readJson<Partial<typeof initialData> | null>(STORAGE_KEY, null)
     if (stored && Array.isArray(stored.valueAddons)) {
       // Merge persisted addon content back into template to preserve icon components
-      const merged = {
-        valueAddons: initialData.valueAddons.map((addon, idx) => {
-          const saved = stored.valueAddons![idx] as any
-          if (!saved) return addon
+      const base = [...initialData.valueAddons]
+      const mergedList = (stored.valueAddons as any[]).map((saved, idx) => {
+        const template = base[idx]
+        if (!template) {
+          // extra item beyond template; use a safe default icon
           return {
-            ...addon,
-            // only override primitive, serializable fields
-            title: saved.title ?? addon.title,
-            impact: typeof saved.impact === "number" ? saved.impact : addon.impact,
-            description: saved.description ?? addon.description,
-            cost: saved.cost ?? addon.cost,
+            icon: Plus,
+            title: saved.title ?? "New Addition",
+            impact: typeof saved.impact === "number" ? saved.impact : 0,
+            description: saved.description ?? "",
+            cost: saved.cost ?? "$0",
           }
-        }),
+        }
+        return {
+          ...template,
+          title: saved.title ?? template.title,
+          impact: typeof saved.impact === "number" ? saved.impact : template.impact,
+          description: saved.description ?? template.description,
+          cost: saved.cost ?? template.cost,
+        }
+      })
+      // If saved list is shorter, keep remaining template items
+      const merged = {
+        valueAddons: mergedList.length < base.length ? [...mergedList, ...base.slice(mergedList.length)] : mergedList,
       }
       setEditableData(merged)
       setOriginalData(merged)
@@ -117,19 +128,28 @@ export function ValueMaximization() {
     // Try remote load as a fallback
     remoteLoad<Partial<typeof initialData>>(userId, "value_maximization").then((remote) => {
       if (remote && Array.isArray(remote.valueAddons)) {
-        const merged = {
-          valueAddons: initialData.valueAddons.map((addon, idx) => {
-            const saved = (remote as any).valueAddons?.[idx]
-            if (!saved) return addon
+        const base = [...initialData.valueAddons]
+        const list = (remote as any).valueAddons as any[]
+        const mergedList = list.map((saved: any, idx: number) => {
+          const template = base[idx]
+          if (!template) {
             return {
-              ...addon,
-              title: saved.title ?? addon.title,
-              impact: typeof saved.impact === "number" ? saved.impact : addon.impact,
-              description: saved.description ?? addon.description,
-              cost: saved.cost ?? addon.cost,
+              icon: Plus,
+              title: saved.title ?? "New Addition",
+              impact: typeof saved.impact === "number" ? saved.impact : 0,
+              description: saved.description ?? "",
+              cost: saved.cost ?? "$0",
             }
-          }),
-        }
+          }
+          return {
+            ...template,
+            title: saved.title ?? template.title,
+            impact: typeof saved.impact === "number" ? saved.impact : template.impact,
+            description: saved.description ?? template.description,
+            cost: saved.cost ?? template.cost,
+          }
+        })
+        const merged = { valueAddons: mergedList.length < base.length ? [...mergedList, ...base.slice(mergedList.length)] : mergedList }
         setEditableData(merged)
         setOriginalData(merged)
         writeJson(STORAGE_KEY, merged)
