@@ -16,7 +16,8 @@ import {
 } from "@/lib/hooks/use-property-analysis"
 import { useUserSettings } from "@/lib/hooks/use-user-settings"
 import { ImageUpload } from "@/components/image-upload"
-import { readJson, writeJson, getCurrentUser } from "@/lib/local-db"
+import { supabaseAuth } from "@/lib/auth/supabase-auth"
+import { supabaseDataStore } from "@/lib/supabase-data-store"
 import { Heart, Save, Trash2, Plus, X } from "lucide-react"
 
 interface PropertyAnalysisFormProps {

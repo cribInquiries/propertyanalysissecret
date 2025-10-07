@@ -1,8 +1,8 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { readJson, writeJson, getCurrentUser } from "@/lib/local-db"
-import { remoteLoad, remoteSave } from "@/lib/remote-store"
+import { supabaseAuth } from "@/lib/auth/supabase-auth"
+import { supabaseDataStore } from "@/lib/supabase-data-store"
 import { motion } from "framer-motion"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -52,25 +52,57 @@ export function PurchaseMotivation() {
   const [newGoal, setNewGoal] = useState("")
   const [loaded, setLoaded] = useState(false)
 
-  const userId = getCurrentUser()?.id || "anon"
-  const STORAGE_KEY = `purchase_motivation_${userId}`
+  const [userId, setUserId] = useState<string | null>(null)
+  const STORAGE_KEY = `purchase_motivation`
 
   useEffect(() => {
-    const stored = readJson<MotivationData | null>(STORAGE_KEY, null)
-    if (stored) {
-      setData(stored)
-      setEditData(stored)
-    }
-    remoteLoad<MotivationData>(userId, "purchase_motivation").then((remote) => {
-      if (remote) {
-        setData(remote)
-        setEditData(remote)
-        writeJson(STORAGE_KEY, remote)
+    const loadUserAndData = async () => {
+      try {
+        const user = await supabaseAuth.getCurrentUser()
+        const currentUserId = user?.id || "anon"
+        setUserId(currentUserId)
+        
+        if (currentUserId !== "anon") {
+          const stored = await supabaseDataStore.loadUserData(currentUserId, STORAGE_KEY)
+          if (stored) {
+            setData(stored)
+            setEditData(stored)
+          }
+        } else {
+          // For anonymous users, try to load from local storage as fallback
+          const localStored = localStorage.getItem(`purchase_motivation_${currentUserId}`)
+          if (localStored) {
+            const parsed = JSON.parse(localStored)
+            setData(parsed)
+            setEditData(parsed)
+          }
+        }
+      } catch (error) {
+        console.error("Error loading user data:", error)
+      } finally {
+        setLoaded(true)
       }
-    }).catch(() => {})
-    setLoaded(true)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }
+
+    loadUserAndData()
   }, [])
+
+  // Auto-persist any changes
+  useEffect(() => {
+    if (!loaded || !userId) return
+    const id = setTimeout(async () => {
+      try {
+        if (userId !== "anon") {
+          await supabaseDataStore.saveUserData(userId, STORAGE_KEY, editData)
+        }
+      } catch (error) {
+        console.error("Failed to auto-save data:", error)
+        // Don't fallback to localStorage to avoid quota issues
+      }
+    }, 2000) // Increased delay to reduce frequency
+    return () => clearTimeout(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editData, loaded, userId])
 
   const calculatedLoanAmount = editData.financials.purchasePrice - editData.financials.totalDeposit
   if (calculatedLoanAmount !== editData.financials.loanAmount && calculatedLoanAmount >= 0) {

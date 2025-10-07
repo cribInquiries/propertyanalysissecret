@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { auth } from "@/lib/auth/client-auth"
+import { supabaseAuth } from "@/lib/auth/supabase-auth"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -30,7 +30,7 @@ export default function LoginPage() {
     }
 
     try {
-      const { user, error: authError } = await auth.signIn(email.trim(), password)
+      const { user, error: authError } = await supabaseAuth.signIn(email.trim(), password)
 
       if (authError) throw new Error(authError)
       if (user) {

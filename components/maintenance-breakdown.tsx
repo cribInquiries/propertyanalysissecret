@@ -6,8 +6,8 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Waves, Bed, Home, TreePine, Star, Edit3, Save, X } from "lucide-react"
 import { useEffect, useState } from "react"
-import { readJson, writeJson, getCurrentUser } from "@/lib/local-db"
-import { remoteLoad, remoteSave } from "@/lib/remote-store"
+import { supabaseAuth } from "@/lib/auth/supabase-auth"
+import { supabaseDataStore } from "@/lib/supabase-data-store"
 
 export function MaintenanceBreakdown() {
   const [isEditing, setIsEditing] = useState(false)
@@ -40,26 +40,58 @@ export function MaintenanceBreakdown() {
   })
   const [originalData, setOriginalData] = useState(editableData)
 
-  const userId = getCurrentUser()?.id || "anon"
-  const STORAGE_KEY = `maintenance_breakdown_${userId}`
+  const [userId, setUserId] = useState<string | null>(null)
+  const STORAGE_KEY = `maintenance_breakdown`
   const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
-    const stored = readJson<typeof editableData | null>(STORAGE_KEY, null)
-    if (stored) {
-      setEditableData(stored)
-      setOriginalData(stored)
-    }
-    remoteLoad<typeof editableData>(userId, "maintenance_breakdown").then((remote) => {
-      if (remote) {
-        setEditableData(remote)
-        setOriginalData(remote)
-        writeJson(STORAGE_KEY, remote)
+    const loadUserAndData = async () => {
+      try {
+        const user = await supabaseAuth.getCurrentUser()
+        const currentUserId = user?.id || "anon"
+        setUserId(currentUserId)
+        
+        if (currentUserId !== "anon") {
+          const stored = await supabaseDataStore.loadUserData(currentUserId, STORAGE_KEY)
+          if (stored) {
+            setEditableData(stored)
+            setOriginalData(stored)
+          }
+        } else {
+          // For anonymous users, try to load from local storage as fallback
+          const localStored = localStorage.getItem(`maintenance_breakdown_${currentUserId}`)
+          if (localStored) {
+            const parsed = JSON.parse(localStored)
+            setEditableData(parsed)
+            setOriginalData(parsed)
+          }
+        }
+      } catch (error) {
+        console.error("Error loading user data:", error)
+      } finally {
+        setLoaded(true)
       }
-    }).catch(() => {})
-    setLoaded(true)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }
+
+    loadUserAndData()
   }, [])
+
+  // Auto-persist any changes
+  useEffect(() => {
+    if (!loaded || !userId) return
+    const id = setTimeout(async () => {
+      try {
+        if (userId !== "anon") {
+          await supabaseDataStore.saveUserData(userId, STORAGE_KEY, editableData)
+        }
+      } catch (error) {
+        console.error("Failed to auto-save data:", error)
+        // Don't fallback to localStorage to avoid quota issues
+      }
+    }, 2000) // Increased delay to reduce frequency
+    return () => clearTimeout(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editableData, loaded, userId])
 
   const poolCost = editableData.hasPool ? editableData.poolChemicalsCost + editableData.poolEquipmentMaintenance : 0
   const gardenCost = editableData.hasGarden ? editableData.gardenWaterCost + editableData.landscapingCost : 0
@@ -131,22 +163,19 @@ export function MaintenanceBreakdown() {
       : []),
   ]
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setIsEditing(false)
     setOriginalData(editableData)
-    writeJson(STORAGE_KEY, editableData)
+    
+    if (userId && userId !== "anon") {
+      try {
+        await supabaseDataStore.saveUserData(userId, STORAGE_KEY, editableData)
+      } catch (error) {
+        console.error("Failed to save data:", error)
+      }
+    }
   }
 
-  // Auto-persist maintenance edits
-  useEffect(() => {
-    if (!loaded) return
-    const id = setTimeout(() => {
-      writeJson(STORAGE_KEY, editableData)
-      remoteSave(userId, "maintenance_breakdown", editableData).catch(() => {})
-    }, 500)
-    return () => clearTimeout(id)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editableData, loaded])
 
   const handleCancel = () => {
     setIsEditing(false)

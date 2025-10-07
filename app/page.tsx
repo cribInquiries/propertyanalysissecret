@@ -8,9 +8,16 @@ import { ValueMaximization } from "@/components/value-maximization"
 import { CompanyPortfolio } from "@/components/company-portfolio"
 import { ContactSection } from "@/components/contact-section"
 import { UserNav } from "@/components/user-nav"
+import { supabaseAuth } from "@/lib/auth/supabase-auth"
 
 export default function PropertyAnalysisPage() {
-  const user = { id: "anon", email: "guest@example.com", name: "Guest" }
+  // Use a default user for now, the actual user will be loaded client-side
+  const user = { 
+    id: "anon", 
+    email: "guest@example.com", 
+    display_name: "Guest" 
+  }
+  
   return (
     <main className="min-h-screen">
       <UserNav user={user} />

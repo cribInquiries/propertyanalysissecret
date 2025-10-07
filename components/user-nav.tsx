@@ -1,6 +1,6 @@
 "use client"
 
-import { auth } from "@/lib/auth/client-auth"
+import { supabaseAuth } from "@/lib/auth/supabase-auth"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -12,26 +12,46 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { DataMigrationDialog } from "@/components/data-migration-dialog"
 
 interface User {
   id: string
   email: string
-  name?: string
+  display_name?: string
+  avatar_url?: string
 }
 
 interface UserNavProps {
   user: User
 }
 
-export function UserNav({ user }: UserNavProps) {
+export function UserNav({ user: initialUser }: UserNavProps) {
   const router = useRouter()
   const [isSigningOut, setIsSigningOut] = useState(false)
+  const [currentUser, setCurrentUser] = useState(initialUser)
+
+  useEffect(() => {
+    // Load the actual user when component mounts
+    const loadUser = async () => {
+      try {
+        const user = await supabaseAuth.getCurrentUser()
+        if (user) {
+          setCurrentUser(user)
+        }
+      } catch (error) {
+        console.error("Error loading user:", error)
+      }
+    }
+    
+    loadUser()
+  }, [])
 
   const handleSignOut = async () => {
     setIsSigningOut(true)
     try {
-      await auth.signOut()
+      await supabaseAuth.signOut()
+      setCurrentUser({ id: "anon", email: "guest@example.com", display_name: "Guest" })
       router.push("/auth/login")
     } catch (error) {
       console.error("Error signing out:", error)
@@ -55,21 +75,23 @@ export function UserNav({ user }: UserNavProps) {
             <span className="font-bold text-slate-900">LuxeAnalytics</span>
           </div>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+          <div className="flex items-center gap-2">
+            <DataMigrationDialog />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                 <Avatar className="h-8 w-8">
                   <AvatarFallback className="bg-slate-100 text-slate-700">
-                    {getInitials(user.email || "")}
+                    {getInitials(currentUser.email || "")}
                   </AvatarFallback>
                 </Avatar>
-              </Button>
-            </DropdownMenuTrigger>
+                </Button>
+              </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56" align="end" forceMount>
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
                   <p className="text-sm font-medium leading-none">Account</p>
-                  <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+                  <p className="text-xs leading-none text-muted-foreground">{currentUser.email}</p>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
@@ -87,7 +109,8 @@ export function UserNav({ user }: UserNavProps) {
                 <span>{isSigningOut ? "Signing out..." : "Sign out"}</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
-          </DropdownMenu>
+            </DropdownMenu>
+          </div>
         </div>
       </div>
     </div>

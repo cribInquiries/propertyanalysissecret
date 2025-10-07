@@ -8,8 +8,9 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Palette, Sofa, Wrench, Camera, Edit3, Save, X, Upload, Plus, Trash2 } from "lucide-react"
 import { useState, useRef, useEffect } from "react"
-import { readJson, writeJson, getCurrentUser } from "@/lib/local-db"
-import { remoteLoad, remoteSave } from "@/lib/remote-store"
+import { supabaseAuth } from "@/lib/auth/supabase-auth"
+import { enhancedDataStore } from "@/lib/enhanced-data-store"
+import { EnhancedImageUpload } from "@/components/enhanced-image-upload"
 
 export function SetupCosts() {
   const [isEditing, setIsEditing] = useState(false)
@@ -50,38 +51,62 @@ export function SetupCosts() {
   })
   const [originalData, setOriginalData] = useState(editableData)
 
-  const userId = getCurrentUser()?.id || "anon"
-  const STORAGE_KEY = `setup_costs_${userId}`
+  const [userId, setUserId] = useState<string | null>(null)
+  const STORAGE_KEY = `setup_costs`
 
   const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
-    const stored = readJson<typeof editableData | null>(STORAGE_KEY, null)
-    if (stored) {
-      setEditableData(stored)
-      setOriginalData(stored)
-    }
-    remoteLoad<typeof editableData>(userId, "setup_costs").then((remote) => {
-      if (remote) {
-        setEditableData(remote)
-        setOriginalData(remote)
-        writeJson(STORAGE_KEY, remote)
+    const loadUserAndData = async () => {
+      try {
+        const user = await supabaseAuth.getCurrentUser()
+        const currentUserId = user?.id || "anon"
+        setUserId(currentUserId)
+        
+        if (currentUserId !== "anon") {
+          const stored = await enhancedDataStore.loadUserData(currentUserId, STORAGE_KEY)
+          if (stored && typeof stored === 'object' && 'renovationItems' in stored && 'furnishingItems' in stored && 'designInspirations' in stored) {
+            setEditableData(stored as typeof editableData)
+            setOriginalData(stored as typeof originalData)
+          }
+        } else {
+          // For anonymous users, try to load from local storage as fallback
+          const localStored = localStorage.getItem(`setup_costs_${currentUserId}`)
+          if (localStored) {
+            const parsed = JSON.parse(localStored)
+            setEditableData(parsed)
+            setOriginalData(parsed)
+          }
+        }
+      } catch (error) {
+        console.error("Error loading user data:", error)
+      } finally {
+        setLoaded(true)
       }
-    }).catch(() => {})
-    setLoaded(true)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }
+
+    loadUserAndData()
   }, [])
 
   // Auto-persist any changes to setup data (including design edits)
   useEffect(() => {
-    if (!loaded) return
-    const id = setTimeout(() => {
-      writeJson(STORAGE_KEY, editableData)
-      remoteSave(userId, "setup_costs", editableData).catch(() => {})
-    }, 500)
+    if (!loaded || !userId) return
+    const id = setTimeout(async () => {
+      try {
+        if (userId !== "anon") {
+          await enhancedDataStore.saveUserData(userId, STORAGE_KEY, editableData, {
+            component: 'setup-costs',
+            description: 'Auto-save data changes'
+          })
+        }
+      } catch (error) {
+        console.error("Failed to auto-save data:", error)
+        // Don't fallback to localStorage to avoid quota issues
+      }
+    }, 2000) // Increased delay to reduce frequency
     return () => clearTimeout(id)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editableData, loaded])
+  }, [editableData, loaded, userId])
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -89,16 +114,38 @@ export function SetupCosts() {
   const totalFurnishing = editableData.furnishingItems.reduce((sum, item) => sum + item.cost, 0)
   const totalSetup = totalRenovation + totalFurnishing
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setIsEditing(false)
     setOriginalData(editableData)
-    writeJson(STORAGE_KEY, editableData)
+    
+    if (userId && userId !== "anon") {
+      try {
+        await enhancedDataStore.saveUserData(userId, STORAGE_KEY, editableData, {
+          component: 'setup-costs',
+          description: 'Manual save - renovation and furnishing data'
+        })
+      } catch (error) {
+        console.error("Failed to save data:", error)
+        localStorage.setItem(`setup_costs_${userId}`, JSON.stringify(editableData))
+      }
+    }
   }
 
-  const handleDesignSave = () => {
+  const handleDesignSave = async () => {
     setIsEditingDesign(false)
     setOriginalData(editableData)
-    writeJson(STORAGE_KEY, editableData)
+    
+    if (userId && userId !== "anon") {
+      try {
+        await enhancedDataStore.saveUserData(userId, STORAGE_KEY, editableData, {
+          component: 'setup-costs',
+          description: 'Manual save - design inspiration data'
+        })
+      } catch (error) {
+        console.error("Failed to save design data:", error)
+        localStorage.setItem(`setup_costs_${userId}`, JSON.stringify(editableData))
+      }
+    }
   }
 
   const handleDesignCancel = () => {
@@ -155,45 +202,30 @@ export function SetupCosts() {
     }))
   }
 
-  const handleImageUpload = async (id: number, event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-    try {
-      const form = new FormData()
-      const user = getCurrentUser()
-      form.append("file", file)
-      form.append("userId", user?.id || "anon")
-      form.append("folder", "design-inspiration")
-
-      const res = await fetch("/api/upload", { method: "POST", body: form, cache: "no-store" })
-      if (!res.ok) throw new Error("Upload failed")
-      const { url } = await res.json()
-      updateDesignInspiration(id, "image", url)
-      // Persist immediately so reloads keep the image
+  const handleImageUploaded = async (url: string, metadata: any) => {
+    // Find the inspiration being edited or create a new one
+    const inspirationId = editableData.designInspirations.length > 0 
+      ? editableData.designInspirations[0].id 
+      : Date.now()
+    
+    updateDesignInspiration(inspirationId, "image", url)
+    
+    // Save with enhanced metadata and change tracking
+    const user = await supabaseAuth.getCurrentUser()
+    if (user?.id) {
       const next = {
         ...editableData,
-        designInspirations: editableData.designInspirations.map((d) => (d.id === id ? { ...d, image: url } : d)),
+        designInspirations: editableData.designInspirations.map((d) => 
+          d.id === inspirationId ? { ...d, image: url } : d
+        ),
       }
-      writeJson(STORAGE_KEY, next)
-      await remoteSave(user?.id || "anon", "setup_costs", next)
-    } catch (e) {
-      console.error("Upload error", e)
-      // Fallback: embed as data URL so it still persists locally/remotely
-      try {
-        const reader = new FileReader()
-        reader.onload = () => {
-          const dataUrl = reader.result as string
-          updateDesignInspiration(id, "image", dataUrl)
-          const next = {
-            ...editableData,
-            designInspirations: editableData.designInspirations.map((d) =>
-              d.id === id ? { ...d, image: dataUrl } : d,
-            ),
-          }
-          writeJson(STORAGE_KEY, next)
-        }
-        reader.readAsDataURL(file)
-      } catch {}
+      
+      await enhancedDataStore.saveUserData(user.id, STORAGE_KEY, next, {
+        component: 'setup-costs',
+        field: 'design-inspiration',
+        description: `Image uploaded: ${metadata.filename}`,
+        immediate: true
+      })
     }
   }
 
@@ -459,20 +491,15 @@ export function SetupCosts() {
                     />
                     {isEditingDesign && (
                       <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-lg flex items-center justify-center">
-                        <Button
-                          onClick={() => {
-                            const input = document.createElement("input")
-                            input.type = "file"
-                            input.accept = "image/*"
-                            input.onchange = (e) => handleImageUpload(inspiration.id, e as any)
-                            input.click()
-                          }}
-                          variant="secondary"
-                          size="sm"
-                        >
-                          <Upload className="w-4 h-4 mr-2" />
-                          Upload Image
-                        </Button>
+                        <EnhancedImageUpload
+                          onImageUploaded={handleImageUploaded}
+                          category="design-inspiration"
+                          maxWidth={800}
+                          maxHeight={600}
+                          quality={0.8}
+                          showPreview={false}
+                          className="w-32 h-20"
+                        />
                       </div>
                     )}
                     {!isEditingDesign && (

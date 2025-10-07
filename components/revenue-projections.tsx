@@ -6,8 +6,8 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { DollarSign, Calendar, TrendingUp, Home, Edit3, Save, X } from "lucide-react"
 import { useEffect, useState } from "react"
-import { readJson, writeJson, getCurrentUser } from "@/lib/local-db"
-import { remoteLoad, remoteSave } from "@/lib/remote-store"
+import { supabaseAuth } from "@/lib/auth/supabase-auth"
+import { supabaseDataStore } from "@/lib/supabase-data-store"
 
 export function RevenueProjections() {
   const [isEditing, setIsEditing] = useState(false)
@@ -50,25 +50,40 @@ export function RevenueProjections() {
   })
   const [originalData, setOriginalData] = useState(editableData)
 
-  const userId = getCurrentUser()?.id || "anon"
-  const STORAGE_KEY = `revenue_projections_${userId}`
+  const [userId, setUserId] = useState<string | null>(null)
+  const STORAGE_KEY = `revenue_projections`
   const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
-    const stored = readJson<typeof editableData | null>(STORAGE_KEY, null)
-    if (stored) {
-      setEditableData(stored)
-      setOriginalData(stored)
-    }
-    remoteLoad<typeof editableData>(userId, "revenue_projections").then((remote) => {
-      if (remote) {
-        setEditableData(remote)
-        setOriginalData(remote)
-        writeJson(STORAGE_KEY, remote)
+    const loadUserAndData = async () => {
+      try {
+        const user = await supabaseAuth.getCurrentUser()
+        const currentUserId = user?.id || "anon"
+        setUserId(currentUserId)
+        
+        if (currentUserId !== "anon") {
+          const stored = await supabaseDataStore.loadUserData(currentUserId, STORAGE_KEY)
+          if (stored) {
+            setEditableData(stored)
+            setOriginalData(stored)
+          }
+        } else {
+          // For anonymous users, try to load from local storage as fallback
+          const localStored = localStorage.getItem(`revenue_projections_${currentUserId}`)
+          if (localStored) {
+            const parsed = JSON.parse(localStored)
+            setEditableData(parsed)
+            setOriginalData(parsed)
+          }
+        }
+      } catch (error) {
+        console.error("Error loading user data:", error)
+      } finally {
+        setLoaded(true)
       }
-    }).catch(() => {})
-    setLoaded(true)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }
+
+    loadUserAndData()
   }, [])
 
   const monthlyData = [
@@ -201,22 +216,46 @@ export function RevenueProjections() {
   const weightedADRSum = monthlyData.reduce((sum, month) => sum + (month.adr * month.days * month.occupancy) / 100, 0)
   const averageADR = Math.round(weightedADRSum / totalOccupiedNights)
 
-  const handleSave = () => {
-    setIsEditing(false)
-    setOriginalData(editableData)
-    writeJson(STORAGE_KEY, editableData)
+  const handleSave = async () => {
+    if (!userId) return
+    
+    try {
+      if (userId !== "anon") {
+        await supabaseDataStore.saveUserData(userId, STORAGE_KEY, editableData)
+      } else {
+        // For anonymous users, save to local storage as fallback
+        localStorage.setItem(`revenue_projections_${userId}`, JSON.stringify(editableData))
+      }
+      setOriginalData(editableData)
+      setIsEditing(false)
+    } catch (error) {
+      console.error("Failed to save data:", error)
+      // Fallback to local storage
+      localStorage.setItem(`revenue_projections_${userId}`, JSON.stringify(editableData))
+      setOriginalData(editableData)
+      setIsEditing(false)
+    }
   }
 
   // Auto-persist revenue edits
   useEffect(() => {
-    if (!loaded) return
-    const id = setTimeout(() => {
-      writeJson(STORAGE_KEY, editableData)
-      remoteSave(userId, "revenue_projections", editableData).catch(() => {})
+    if (!loaded || !userId) return
+    const id = setTimeout(async () => {
+      try {
+        if (userId !== "anon") {
+          await supabaseDataStore.saveUserData(userId, STORAGE_KEY, editableData)
+        } else {
+          localStorage.setItem(`revenue_projections_${userId}`, JSON.stringify(editableData))
+        }
+      } catch (error) {
+        console.error("Failed to auto-save data:", error)
+        // Fallback to local storage
+        localStorage.setItem(`revenue_projections_${userId}`, JSON.stringify(editableData))
+      }
     }, 500)
     return () => clearTimeout(id)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editableData, loaded])
+  }, [editableData, loaded, userId])
 
   const handleCancel = () => {
     setIsEditing(false)

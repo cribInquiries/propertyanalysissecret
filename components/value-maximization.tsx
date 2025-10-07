@@ -20,8 +20,8 @@ import {
   Trash2,
 } from "lucide-react"
 import { useEffect, useState } from "react"
-import { readJson, writeJson, getCurrentUser } from "@/lib/local-db"
-import { remoteLoad, remoteSave } from "@/lib/remote-store"
+import { supabaseAuth } from "@/lib/auth/supabase-auth"
+import { supabaseDataStore } from "@/lib/supabase-data-store"
 
 const initialData = {
   valueAddons: [
@@ -89,79 +89,110 @@ export function ValueMaximization() {
   const [editableData, setEditableData] = useState(initialData)
   const [originalData, setOriginalData] = useState(initialData)
 
-  const userId = getCurrentUser()?.id || "anon"
-  const STORAGE_KEY = `value_maximization_${userId}`
+  const [userId, setUserId] = useState<string | null>(null)
+  const STORAGE_KEY = `value_maximization`
   const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
-    const stored = readJson<Partial<typeof initialData> | null>(STORAGE_KEY, null)
-    if (stored && Array.isArray(stored.valueAddons)) {
-      // Merge persisted addon content back into template to preserve icon components
-      const base = [...initialData.valueAddons]
-      const mergedList = (stored.valueAddons as any[]).map((saved, idx) => {
-        const template = base[idx]
-        if (!template) {
-          // extra item beyond template; use a safe default icon
-          return {
-            icon: Plus,
-            title: saved.title ?? "New Addition",
-            impact: typeof saved.impact === "number" ? saved.impact : 0,
-            description: saved.description ?? "",
-            cost: saved.cost ?? "$0",
+    const loadUserAndData = async () => {
+      try {
+        const user = await supabaseAuth.getCurrentUser()
+        const currentUserId = user?.id || "anon"
+        setUserId(currentUserId)
+        
+        if (currentUserId !== "anon") {
+          const stored = await supabaseDataStore.loadUserData(currentUserId, STORAGE_KEY)
+          if (stored && Array.isArray(stored.valueAddons)) {
+            // Merge persisted addon content back into template to preserve icon components
+            const base = [...initialData.valueAddons]
+            const mergedList = (stored.valueAddons as any[]).map((saved, idx) => {
+              const template = base[idx]
+              if (!template) {
+                // extra item beyond template; use a safe default icon
+                return {
+                  icon: Plus,
+                  title: saved.title ?? "New Addition",
+                  impact: typeof saved.impact === "number" ? saved.impact : 0,
+                  description: saved.description ?? "",
+                  cost: saved.cost ?? "$0",
+                }
+              }
+              return {
+                ...template,
+                title: saved.title ?? template.title,
+                impact: typeof saved.impact === "number" ? saved.impact : template.impact,
+                description: saved.description ?? template.description,
+                cost: saved.cost ?? template.cost,
+              }
+            })
+            // Respect deletions: do NOT append missing template items back
+            const merged = { valueAddons: mergedList }
+            setEditableData(merged)
+            setOriginalData(merged)
           }
-        }
-        return {
-          ...template,
-          title: saved.title ?? template.title,
-          impact: typeof saved.impact === "number" ? saved.impact : template.impact,
-          description: saved.description ?? template.description,
-          cost: saved.cost ?? template.cost,
-        }
-      })
-      // Respect deletions: do NOT append missing template items back
-      const merged = { valueAddons: mergedList }
-      setEditableData(merged)
-      setOriginalData(merged)
-    }
-    // Try remote load as a fallback
-    remoteLoad<Partial<typeof initialData>>(userId, "value_maximization").then((remote) => {
-      if (remote && Array.isArray(remote.valueAddons)) {
-        const base = [...initialData.valueAddons]
-        const list = (remote as any).valueAddons as any[]
-        const mergedList = list.map((saved: any, idx: number) => {
-          const template = base[idx]
-          if (!template) {
-            return {
-              icon: Plus,
-              title: saved.title ?? "New Addition",
-              impact: typeof saved.impact === "number" ? saved.impact : 0,
-              description: saved.description ?? "",
-              cost: saved.cost ?? "$0",
+        } else {
+          // For anonymous users, try to load from local storage as fallback
+          const localStored = localStorage.getItem(`value_maximization_${currentUserId}`)
+          if (localStored) {
+            const parsed = JSON.parse(localStored)
+            if (Array.isArray(parsed.valueAddons)) {
+              const base = [...initialData.valueAddons]
+              const mergedList = (parsed.valueAddons as any[]).map((saved, idx) => {
+                const template = base[idx]
+                if (!template) {
+                  return {
+                    icon: Plus,
+                    title: saved.title ?? "New Addition",
+                    impact: typeof saved.impact === "number" ? saved.impact : 0,
+                    description: saved.description ?? "",
+                    cost: saved.cost ?? "$0",
+                  }
+                }
+                return {
+                  ...template,
+                  title: saved.title ?? template.title,
+                  impact: typeof saved.impact === "number" ? saved.impact : template.impact,
+                  description: saved.description ?? template.description,
+                  cost: saved.cost ?? template.cost,
+                }
+              })
+              const merged = { valueAddons: mergedList }
+              setEditableData(merged)
+              setOriginalData(merged)
             }
           }
-          return {
-            ...template,
-            title: saved.title ?? template.title,
-            impact: typeof saved.impact === "number" ? saved.impact : template.impact,
-            description: saved.description ?? template.description,
-            cost: saved.cost ?? template.cost,
-          }
-        })
-        // Respect deletions: do NOT append missing template items back
-        const merged = { valueAddons: mergedList }
-        setEditableData(merged)
-        setOriginalData(merged)
-        writeJson(STORAGE_KEY, merged)
+        }
+      } catch (error) {
+        console.error("Error loading user data:", error)
+      } finally {
+        setLoaded(true)
       }
-    }).catch(() => {})
-    setLoaded(true)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }
+
+    loadUserAndData()
   }, [])
+
+  // Auto-persist any changes
+  useEffect(() => {
+    if (!loaded || !userId) return
+    const id = setTimeout(async () => {
+      try {
+        if (userId !== "anon") {
+          await supabaseDataStore.saveUserData(userId, STORAGE_KEY, editableData)
+        }
+      } catch (error) {
+        console.error("Failed to auto-save data:", error)
+        // Don't fallback to localStorage to avoid quota issues
+      }
+    }, 2000) // Increased delay to reduce frequency
+    return () => clearTimeout(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editableData, loaded, userId])
 
   const totalPotentialIncrease = editableData.valueAddons.reduce((sum, addon) => sum + addon.impact, 0)
   const annualIncrease = totalPotentialIncrease * 365 * 0.82 // Assuming 82% occupancy
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setIsEditing(false)
     setOriginalData(editableData)
     // Persist only serializable fields; avoid storing icon components
@@ -173,14 +204,21 @@ export function ValueMaximization() {
         cost,
       })),
     }
-    writeJson(STORAGE_KEY, toStore)
-    remoteSave(userId, "value_maximization", toStore).catch(() => {})
+    
+    if (userId && userId !== "anon") {
+      try {
+        await supabaseDataStore.saveUserData(userId, STORAGE_KEY, toStore)
+      } catch (error) {
+        console.error("Failed to save data:", error)
+        localStorage.setItem(`value_maximization_${userId}`, JSON.stringify(toStore))
+      }
+    }
   }
 
   // Auto-persist edits (serialize-only) to avoid data loss without clicking Save
   useEffect(() => {
-    if (!loaded) return
-    const id = setTimeout(() => {
+    if (!loaded || !userId) return
+    const id = setTimeout(async () => {
       const toStore = {
         valueAddons: editableData.valueAddons.map(({ title, impact, description, cost }) => ({
           title,
@@ -189,12 +227,22 @@ export function ValueMaximization() {
           cost,
         })),
       }
-      writeJson(STORAGE_KEY, toStore)
-      remoteSave(userId, "value_maximization", toStore).catch(() => {})
+      
+      try {
+        if (userId !== "anon") {
+          await supabaseDataStore.saveUserData(userId, STORAGE_KEY, toStore)
+        } else {
+          localStorage.setItem(`value_maximization_${userId}`, JSON.stringify(toStore))
+        }
+      } catch (error) {
+        console.error("Failed to auto-save data:", error)
+        // Fallback to local storage
+        localStorage.setItem(`value_maximization_${userId}`, JSON.stringify(toStore))
+      }
     }, 500)
     return () => clearTimeout(id)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editableData, loaded])
+  }, [editableData, loaded, userId])
 
   const handleCancel = () => {
     setIsEditing(false)

@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { X, Upload, ImageIcon } from "lucide-react"
-import { readJson, writeJson, generateId, getCurrentUser } from "@/lib/local-db"
-import { remoteSave } from "@/lib/remote-store"
+import { supabaseAuth } from "@/lib/auth/supabase-auth"
+import { supabaseDataStore } from "@/lib/supabase-data-store"
 import { toast } from "@/hooks/use-toast"
 
 interface ImageUploadProps {

@@ -8,8 +8,8 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { MapPin, Award, Users, TrendingUp, Shield, Edit3, Save, X, Upload, Plus, Trash2 } from "lucide-react"
 import { useEffect, useState } from "react"
-import { readJson, writeJson, getCurrentUser } from "@/lib/local-db"
-import { remoteLoad, remoteSave } from "@/lib/remote-store"
+import { supabaseAuth } from "@/lib/auth/supabase-auth"
+import { supabaseDataStore } from "@/lib/supabase-data-store"
 
 const CompanyPortfolio = () => {
   const [isEditing, setIsEditing] = useState(false)
@@ -55,25 +55,40 @@ const CompanyPortfolio = () => {
   })
   const [originalData, setOriginalData] = useState(editableData)
 
-  const userId = getCurrentUser()?.id || "anon"
-  const STORAGE_KEY = `company_portfolio_${userId}`
+  const [userId, setUserId] = useState<string | null>(null)
+  const STORAGE_KEY = `company_portfolio`
   const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
-    const stored = readJson<typeof editableData | null>(STORAGE_KEY, null)
-    if (stored) {
-      setEditableData(stored)
-      setOriginalData(stored)
-    }
-    remoteLoad<typeof editableData>(userId, "company_portfolio").then((remote) => {
-      if (remote) {
-        setEditableData(remote)
-        setOriginalData(remote)
-        writeJson(STORAGE_KEY, remote)
+    const loadUserAndData = async () => {
+      try {
+        const user = await supabaseAuth.getCurrentUser()
+        const currentUserId = user?.id || "anon"
+        setUserId(currentUserId)
+        
+        if (currentUserId !== "anon") {
+          const stored = await supabaseDataStore.loadUserData(currentUserId, STORAGE_KEY)
+          if (stored) {
+            setEditableData(stored)
+            setOriginalData(stored)
+          }
+        } else {
+          // For anonymous users, try to load from local storage as fallback
+          const localStored = localStorage.getItem(`company_portfolio_${currentUserId}`)
+          if (localStored) {
+            const parsed = JSON.parse(localStored)
+            setEditableData(parsed)
+            setOriginalData(parsed)
+          }
+        }
+      } catch (error) {
+        console.error("Error loading user data:", error)
+      } finally {
+        setLoaded(true)
       }
-    }).catch(() => {})
-    setLoaded(true)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }
+
+    loadUserAndData()
   }, [])
 
   const achievements = [
@@ -99,23 +114,36 @@ const CompanyPortfolio = () => {
     },
   ]
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setIsEditing(false)
     setOriginalData(editableData)
-    writeJson(STORAGE_KEY, editableData)
-    remoteSave(userId, "company_portfolio", editableData).catch(() => {})
+    
+    if (userId && userId !== "anon") {
+      try {
+        await supabaseDataStore.saveUserData(userId, STORAGE_KEY, editableData)
+      } catch (error) {
+        console.error("Failed to save data:", error)
+        localStorage.setItem(`company_portfolio_${userId}`, JSON.stringify(editableData))
+      }
+    }
   }
 
   // Auto-persist portfolio edits
   useEffect(() => {
-    if (!loaded) return
-    const id = setTimeout(() => {
-      writeJson(STORAGE_KEY, editableData)
-      remoteSave(userId, "company_portfolio", editableData).catch(() => {})
-    }, 500)
+    if (!loaded || !userId) return
+    const id = setTimeout(async () => {
+      try {
+        if (userId !== "anon") {
+          await supabaseDataStore.saveUserData(userId, STORAGE_KEY, editableData)
+        }
+      } catch (error) {
+        console.error("Failed to auto-save data:", error)
+        // Don't fallback to localStorage to avoid quota issues
+      }
+    }, 2000) // Increased delay to reduce frequency
     return () => clearTimeout(id)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editableData, loaded])
+  }, [editableData, loaded, userId])
 
   const handleCancel = () => {
     setIsEditing(false)
@@ -164,28 +192,48 @@ const CompanyPortfolio = () => {
     if (!file) return
     try {
       const form = new FormData()
-      const user = getCurrentUser()
+      const user = await supabaseAuth.getCurrentUser()
+      const currentUserId = user?.id || "anon"
       form.append("file", file)
-      form.append("userId", user?.id || "anon")
+      form.append("userId", currentUserId)
       form.append("folder", "portfolio")
 
       const res = await fetch("/api/upload", { method: "POST", body: form, cache: "no-store" })
-      if (!res.ok) throw new Error("Upload failed")
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}))
+        console.error("Upload failed:", {
+          status: res.status,
+          statusText: res.statusText,
+          error: errorData
+        })
+        throw new Error(`Upload failed: ${errorData.error || res.statusText}`)
+      }
       const { url } = await res.json()
       updateProperty(id, "image", url)
+      
       // persist immediately
       const next = {
         ...editableData,
         portfolioProperties: editableData.portfolioProperties.map((p) => (p.id === id ? { ...p, image: url } : p)),
       }
-      writeJson(STORAGE_KEY, next)
-      await remoteSave(user?.id || "anon", "company_portfolio", next)
+      
+      try {
+        if (currentUserId !== "anon") {
+          await supabaseDataStore.saveUserData(currentUserId, STORAGE_KEY, next)
+        } else {
+          localStorage.setItem(`company_portfolio_${currentUserId}`, JSON.stringify(next))
+        }
+      } catch (error) {
+        console.error("Failed to save image data:", error)
+        // Fallback to local storage
+        localStorage.setItem(`company_portfolio_${currentUserId}`, JSON.stringify(next))
+      }
     } catch (e) {
       console.error("Upload error", e)
       // Fallback to data URL so UI updates even if remote fails
       try {
         const reader = new FileReader()
-        reader.onload = () => {
+        reader.onload = async () => {
           const dataUrl = reader.result as string
           updateProperty(id, "image", dataUrl)
           const next = {
@@ -194,7 +242,18 @@ const CompanyPortfolio = () => {
               p.id === id ? { ...p, image: dataUrl } : p,
             ),
           }
-          writeJson(STORAGE_KEY, next)
+          
+          // Save the fallback data URL
+          try {
+            if (userId && userId !== "anon") {
+              await supabaseDataStore.saveUserData(userId, STORAGE_KEY, next)
+            } else {
+              localStorage.setItem(`company_portfolio_${userId}`, JSON.stringify(next))
+            }
+          } catch (error) {
+            console.error("Failed to save fallback image data:", error)
+            localStorage.setItem(`company_portfolio_${userId}`, JSON.stringify(next))
+          }
         }
         reader.readAsDataURL(file)
       } catch {}
