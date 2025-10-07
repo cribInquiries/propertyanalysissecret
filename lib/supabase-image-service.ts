@@ -29,27 +29,18 @@ export interface ImageUploadOptions {
   folder?: string
 }
 
-export interface ImageResizeOptions {
-  width?: number
-  height?: number
-  maxWidth?: number
-  maxHeight?: number
-  quality?: number
-  format?: 'jpeg' | 'png' | 'webp'
-}
-
-class ImageService {
+class SupabaseImageService {
   private supabase: any
 
   constructor() {
     this.supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key'
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
   }
 
   /**
-   * Upload an image with comprehensive metadata and processing
+   * Upload an image to Supabase Storage
    */
   async uploadImage(
     file: File,
@@ -61,25 +52,18 @@ class ImageService {
         throw new Error('Invalid image file type')
       }
 
-      // Process image if needed
-      const processedFile = await this.processImage(file, {
-        maxWidth: options.maxWidth,
-        maxHeight: options.maxHeight,
-        quality: options.quality
-      })
-
       // Generate unique filename
       const fileId = this.generateFileId()
       const safeName = this.sanitizeFileName(file.name)
       const fileName = `${fileId}-${safeName}`
-      const folder = options.folder || 'uploads'
-      const filePath = `userdata/${encodeURIComponent(options.userId)}/${folder}/${fileName}`
+      const folder = options.folder || 'general'
+      const filePath = `${options.userId}/${folder}/${fileName}`
 
       // Upload to Supabase Storage
       const { data: uploadData, error: uploadError } = await this.supabase.storage
         .from('user-uploads')
-        .upload(filePath, processedFile, {
-          contentType: processedFile.type || file.type,
+        .upload(filePath, file, {
+          contentType: file.type,
           cacheControl: '3600',
           upsert: false
         })
@@ -93,8 +77,8 @@ class ImageService {
         .from('user-uploads')
         .getPublicUrl(filePath)
 
-      // Get image dimensions
-      const dimensions = await this.getImageDimensions(processedFile)
+      // Get image dimensions (basic implementation)
+      const dimensions = await this.getImageDimensions(file)
 
       // Create metadata object
       const metadata: ImageMetadata = {
@@ -102,8 +86,8 @@ class ImageService {
         userId: options.userId,
         filename: fileName,
         originalName: file.name,
-        mimeType: processedFile.type || file.type,
-        size: processedFile.size,
+        mimeType: file.type,
+        size: file.size,
         width: dimensions.width,
         height: dimensions.height,
         url: publicUrl,
@@ -227,74 +211,12 @@ class ImageService {
   }
 
   /**
-   * Process image (resize, compress, etc.)
-   */
-  private async processImage(
-    file: File,
-    options: ImageResizeOptions = {}
-  ): Promise<File> {
-    return new Promise((resolve) => {
-      const canvas = document.createElement('canvas')
-      const ctx = canvas.getContext('2d')!
-      const img = new Image()
-
-      img.onload = () => {
-        // Calculate new dimensions
-        let { width, height } = img
-        const { maxWidth, maxHeight, quality = 0.8 } = options
-
-        if (maxWidth && width > maxWidth) {
-          height = (height * maxWidth) / width
-          width = maxWidth
-        }
-
-        if (maxHeight && height > maxHeight) {
-          width = (width * maxHeight) / height
-          height = maxHeight
-        }
-
-        // Set canvas dimensions
-        canvas.width = width
-        canvas.height = height
-
-        // Draw and compress
-        ctx.drawImage(img, 0, 0, width, height)
-        
-        canvas.toBlob(
-          (blob) => {
-            if (blob) {
-              const processedFile = new File([blob], file.name, {
-                type: options.format ? `image/${options.format}` : file.type,
-                lastModified: Date.now()
-              })
-              resolve(processedFile)
-            } else {
-              resolve(file) // Fallback to original
-            }
-          },
-          options.format ? `image/${options.format}` : file.type,
-          quality
-        )
-      }
-
-      img.onerror = () => resolve(file) // Fallback to original
-      img.src = URL.createObjectURL(file)
-    })
-  }
-
-  /**
-   * Get image dimensions
+   * Get image dimensions (server-side compatible)
    */
   private async getImageDimensions(file: File): Promise<{ width: number; height: number }> {
-    return new Promise((resolve) => {
-      const img = new Image()
-      img.onload = () => {
-        resolve({ width: img.width, height: img.height })
-        URL.revokeObjectURL(img.src)
-      }
-      img.onerror = () => resolve({ width: 0, height: 0 })
-      img.src = URL.createObjectURL(file)
-    })
+    // For server-side, we'll return 0,0 and let the client update it later
+    // In a production app, you might use a library like 'sharp' for server-side image processing
+    return { width: 0, height: 0 }
   }
 
   /**
@@ -359,4 +281,4 @@ class ImageService {
   }
 }
 
-export const imageService = new ImageService()
+export const supabaseImageService = new SupabaseImageService()

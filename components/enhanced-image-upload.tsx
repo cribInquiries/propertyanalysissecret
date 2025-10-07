@@ -227,7 +227,7 @@ export function EnhancedImageUpload({
       if (!user?.id) return
 
       const response = await fetch('/api/upload', {
-        method: 'PATCH',
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
         },

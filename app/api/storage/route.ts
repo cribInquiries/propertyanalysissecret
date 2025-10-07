@@ -9,9 +9,13 @@ export const dynamic = "force-dynamic"
 export const maxDuration = 60
 
 // Create a simple Supabase client for API routes
+// Provide fallback values to prevent build errors when env vars are missing
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder-key'
+
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY! // Use service role key to bypass RLS for API routes
+  supabaseUrl,
+  supabaseKey // Use service role key to bypass RLS for API routes
 )
 
 const cachedDataStore = new CachedDataStore(supabase)

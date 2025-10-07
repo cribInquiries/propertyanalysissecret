@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { imageService, ImageUploadOptions } from "@/lib/image-service"
+import { supabaseImageService, ImageUploadOptions } from "@/lib/supabase-image-service"
 import { DataValidator } from "@/lib/data-validation"
 import { securityManager } from "@/lib/security-manager"
 import { RateLimiter } from "@/lib/data-validation"
@@ -87,8 +87,8 @@ export async function POST(request: Request) {
       quality
     }
 
-        // Upload using enhanced image service
-        const result = await imageService.uploadImage(file, uploadOptions)
+        // Upload using Supabase image service
+        const result = await supabaseImageService.uploadImage(file, uploadOptions)
 
         // Log successful upload
         await securityManager.monitorDataAccess(
@@ -132,7 +132,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Authentication required" }, { status: 401 })
     }
 
-    const images = await imageService.getUserImages(userId, category || undefined)
+    const images = await supabaseImageService.getUserImages(userId, category || undefined)
 
     return NextResponse.json({ images })
   } catch (error) {
@@ -158,7 +158,7 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: "Image ID required" }, { status: 400 })
     }
 
-    const success = await imageService.deleteImage(userId, imageId)
+    const success = await supabaseImageService.deleteImage(userId, imageId)
 
     if (!success) {
       return NextResponse.json({ error: "Failed to delete image" }, { status: 500 })
@@ -167,6 +167,38 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Error deleting image:', error)
+    return NextResponse.json({ 
+      error: (error as Error).message 
+    }, { status: 500 })
+  }
+}
+
+// PUT endpoint to update image metadata
+export async function PUT(request: Request) {
+  try {
+    const body = await request.json()
+    const { userId, imageId, description, tags } = body
+
+    if (!userId || userId === "anon") {
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 })
+    }
+
+    if (!imageId) {
+      return NextResponse.json({ error: "Image ID required" }, { status: 400 })
+    }
+
+    const success = await supabaseImageService.updateImageMetadata(userId, imageId, {
+      description,
+      tags
+    })
+
+    if (!success) {
+      return NextResponse.json({ error: "Failed to update image" }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Error updating image:', error)
     return NextResponse.json({ 
       error: (error as Error).message 
     }, { status: 500 })
