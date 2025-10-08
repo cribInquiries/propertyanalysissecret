@@ -1,21 +1,15 @@
 {
-  "version": 1,
-  "servers": {
+  "mcpServers": {
     "supabase": {
-      "command": "supabase-mcp",
-      "args": [],
-      "env": {
-        "SUPABASE_ACCESS_TOKEN": "${sbp_8b3d84af6b13924c7aaaa9b1bc36f071d0c85dd6}",
-        "SUPABASE_URL": "${https://enclxnbfucvjyqzlpvtt.supabase.co}",
-        "SUPABASE_ANON_KEY": "${eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVuY2x4bmJmdWN2anlxemxwdnR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkwNTUwNDYsImV4cCI6MjA3NDYzMTA0Nn0.Y7VOqA_RvUBeNcf2oc45_shVyQDrLXzL0iO9p2Vr-Jw}"
-      },
-      "eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVuY2x4bmJmdWN2anlxemxwdnR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkwNTUwNDYsImV4cCI6MjA3NDYzMTA0Nn0": true
-    },
-    "vapi-docs": {
       "command": "npx",
-      "args": ["-y", "@vapi-ai/mcp-server"],
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-supabase"
+      ],
       "env": {
-        "VAPI_TOKEN": "${VAPI_TOKEN}"
+        "SUPABASE_ACCESS_TOKEN": "sbp_8b3d84af6b13924c7aaaa9b1bc36f071d0c85dd6",
+        "SUPABASE_URL": "https://enclxnbfucvjyqzlpvtt.supabase.co",
+        "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVuY2x4bmJmdWN2anlxemxwdnR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkwNTUwNDYsImV4cCI6MjA3NDYzMTA0Nn0.Y7VOqA_RvUBeNcf2oc45_shVyQDrLXzL0iO9p2Vr-Jw"
       }
     }
   }
