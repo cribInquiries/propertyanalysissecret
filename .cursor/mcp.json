@@ -11,6 +11,16 @@
         "SUPABASE_URL": "https://enclxnbfucvjyqzlpvtt.supabase.co",
         "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVuY2x4bmJmdWN2anlxemxwdnR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkwNTUwNDYsImV4cCI6MjA3NDYzMTA0Nn0.Y7VOqA_RvUBeNcf2oc45_shVyQDrLXzL0iO9p2Vr-Jw"
       }
+    },
+    "vapi": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@vapi-ai/mcp-server"
+      ],
+      "env": {
+        "VAPI_TOKEN": "5fdc55c4-3fc9-4902-8df7-0e0a766ccb3e"
+      }
     }
   }
 }
