@@ -143,7 +143,7 @@ export function DashboardContent() {
                 <p className="text-sm text-muted-foreground">Total Analyses</p>
                 <p className="text-2xl font-bold">{totalAnalyses}</p>
               </div>
-              <Home className="h-8 w-8 text-blue-500" />
+              <Home className="h-8 w-8 text-muted-foreground" />
             </div>
           </CardContent>
         </Card>
@@ -155,7 +155,7 @@ export function DashboardContent() {
                 <p className="text-sm text-muted-foreground">Favorites</p>
                 <p className="text-2xl font-bold">{favoriteAnalyses}</p>
               </div>
-              <Heart className="h-8 w-8 text-red-500" />
+              <Heart className="h-8 w-8 text-muted-foreground" />
             </div>
           </CardContent>
         </Card>
@@ -167,7 +167,7 @@ export function DashboardContent() {
                 <p className="text-sm text-muted-foreground">Completed</p>
                 <p className="text-2xl font-bold">{completedAnalyses}</p>
               </div>
-              <TrendingUp className="h-8 w-8 text-green-500" />
+              <TrendingUp className="h-8 w-8 text-muted-foreground" />
             </div>
           </CardContent>
         </Card>
@@ -179,7 +179,7 @@ export function DashboardContent() {
                 <p className="text-sm text-muted-foreground">Total Investment</p>
                 <p className="text-2xl font-bold">{formatCurrency(totalInvestment)}</p>
               </div>
-              <DollarSign className="h-8 w-8 text-yellow-500" />
+              <DollarSign className="h-8 w-8 text-muted-foreground" />
             </div>
           </CardContent>
         </Card>
@@ -279,7 +279,6 @@ export function DashboardContent() {
                             variant="ghost"
                             size="icon"
                             onClick={() => handleToggleFavorite(analysis)}
-                            className={analysis.is_favorite ? "text-red-500" : ""}
                           >
                             <Heart className={`h-4 w-4 ${analysis.is_favorite ? "fill-current" : ""}`} />
                           </Button>
@@ -307,7 +306,7 @@ export function DashboardContent() {
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
                           <span className="text-sm text-muted-foreground">Monthly Cash Flow</span>
-                          <span className={`font-semibold ${cashFlow >= 0 ? "text-green-600" : "text-red-600"}`}>
+                          <span className="font-semibold">
                             {formatCurrency(cashFlow)}
                           </span>
                         </div>
@@ -329,7 +328,7 @@ export function DashboardContent() {
                             <Calendar className="h-3 w-3" />
                             {new Date(analysis.created_at).toLocaleDateString()}
                           </div>
-                          {analysis.is_favorite && <Star className="h-3 w-3 fill-current text-yellow-500" />}
+                          {analysis.is_favorite && <Star className="h-3 w-3 fill-current" />}
                         </div>
                       </div>
                     </CardContent>
@@ -390,14 +389,14 @@ export function DashboardContent() {
                                 <Badge variant={analysis.status === "completed" ? "default" : "secondary"}>
                                   {analysis.status}
                                 </Badge>
-                                {analysis.is_favorite && <Heart className="h-3 w-3 fill-current text-red-500" />}
+                                {analysis.is_favorite && <Heart className="h-3 w-3 fill-current" />}
                               </div>
                             </div>
                           </div>
                           <div className="flex items-center gap-4">
                             <div className="text-right">
                               <div className="text-sm text-muted-foreground">Monthly Cash Flow</div>
-                              <div className={`font-semibold ${cashFlow >= 0 ? "text-green-600" : "text-red-600"}`}>
+                              <div className="font-semibold">
                                 {formatCurrency(cashFlow)}
                               </div>
                             </div>

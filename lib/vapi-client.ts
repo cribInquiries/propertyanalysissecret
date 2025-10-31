@@ -1,5 +1,9 @@
+'use client'
+
 // Vapi Client Integration for Property Analysis App
 // This file shows how to integrate Vapi voice AI into your property analysis application
+
+import { useState } from 'react'
 
 export interface VapiConfig {
   apiKey: string;

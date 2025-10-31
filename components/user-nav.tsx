@@ -101,7 +101,7 @@ export function UserNav({ user: initialUser }: UserNavProps) {
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                className="cursor-pointer text-red-600 focus:text-red-600"
+                className="cursor-pointer"
                 onClick={handleSignOut}
                 disabled={isSigningOut}
               >

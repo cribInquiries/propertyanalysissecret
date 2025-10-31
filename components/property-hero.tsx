@@ -66,7 +66,7 @@ export function PropertyHero() {
           </Button>
         ) : (
           <div className="flex gap-2">
-            <Button onClick={handleSave} size="sm" className="bg-green-600 hover:bg-green-700 text-white">
+            <Button onClick={handleSave} size="sm">
               <Save className="w-4 h-4 mr-2" />
               Save
             </Button>

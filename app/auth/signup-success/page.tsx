@@ -16,8 +16,8 @@ export default function SignupSuccessPage() {
 
         <Card className="shadow-xl border-0">
           <CardHeader className="text-center space-y-4">
-            <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
-              <Mail className="h-8 w-8 text-green-600" />
+            <div className="mx-auto w-16 h-16 bg-muted rounded-full flex items-center justify-center">
+              <Mail className="h-8 w-8 text-muted-foreground" />
             </div>
             <CardTitle className="text-2xl">Check your email</CardTitle>
             <CardDescription>We've sent you a confirmation link to complete your registration</CardDescription>

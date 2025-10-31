@@ -239,7 +239,6 @@ export function PropertyAnalysisForm({ analysis, onSave, onCancel }: PropertyAna
               variant="outline"
               size="icon"
               onClick={handleToggleFavorite}
-              className={analysis.is_favorite ? "text-red-500" : ""}
             >
               <Heart className={`h-4 w-4 ${analysis.is_favorite ? "fill-current" : ""}`} />
             </Button>
@@ -400,9 +399,7 @@ export function PropertyAnalysisForm({ analysis, onSave, onCancel }: PropertyAna
             <Card>
               <CardContent className="p-4">
                 <div className="text-sm text-muted-foreground">Monthly Cash Flow</div>
-                <div
-                  className={`text-2xl font-bold ${metrics.monthlyCashFlow >= 0 ? "text-green-600" : "text-red-600"}`}
-                >
+                <div className="text-2xl font-bold">
                   ${metrics.monthlyCashFlow.toFixed(2)}
                 </div>
               </CardContent>
@@ -410,9 +407,7 @@ export function PropertyAnalysisForm({ analysis, onSave, onCancel }: PropertyAna
             <Card>
               <CardContent className="p-4">
                 <div className="text-sm text-muted-foreground">Cash-on-Cash Return</div>
-                <div
-                  className={`text-2xl font-bold ${metrics.cashOnCashReturn >= 0 ? "text-green-600" : "text-red-600"}`}
-                >
+                <div className="text-2xl font-bold">
                   {metrics.cashOnCashReturn.toFixed(2)}%
                 </div>
               </CardContent>
@@ -420,7 +415,7 @@ export function PropertyAnalysisForm({ analysis, onSave, onCancel }: PropertyAna
             <Card>
               <CardContent className="p-4">
                 <div className="text-sm text-muted-foreground">Cap Rate</div>
-                <div className="text-2xl font-bold text-blue-600">{metrics.capRate.toFixed(2)}%</div>
+                <div className="text-2xl font-bold">{metrics.capRate.toFixed(2)}%</div>
               </CardContent>
             </Card>
           </div>

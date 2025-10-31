@@ -174,7 +174,6 @@ export function VapiVoiceAssistant({
               onClick={startCall}
               disabled={!selectedAssistant || isLoading}
               size="lg"
-              className="bg-green-600 hover:bg-green-700"
             >
               <Phone className="h-4 w-4 mr-2" />
               Start Voice Analysis

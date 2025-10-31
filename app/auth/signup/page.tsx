@@ -129,8 +129,8 @@ export default function SignupPage() {
                 />
               </div>
               {error && (
-                <div className="bg-red-50 border border-red-200 rounded-md p-3" role="alert">
-                  <p className="text-sm text-red-600">{error}</p>
+                <div className="bg-destructive/10 border border-destructive/20 rounded-md p-3" role="alert">
+                  <p className="text-sm text-destructive">{error}</p>
                 </div>
               )}
               <Button type="submit" className="w-full h-11 bg-slate-900 hover:bg-slate-800" disabled={isLoading}>

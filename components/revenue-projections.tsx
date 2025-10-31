@@ -583,7 +583,7 @@ export function RevenueProjections() {
                         className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none"
                       >
                         <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3">
-                          <h4 className="font-semibold text-blue-600 mb-2">{month.fullMonth}</h4>
+                          <h4 className="font-semibold mb-2">{month.fullMonth}</h4>
                           <div className="grid grid-cols-1 gap-1 text-xs">
                             <div className="flex justify-between">
                               <span className="text-muted-foreground">Revenue:</span>
