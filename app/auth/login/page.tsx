@@ -34,9 +34,14 @@ export default function LoginPage() {
 
       if (authError) throw new Error(authError)
       if (user) {
+        // Wait a bit for session to be fully established
+        await new Promise(resolve => setTimeout(resolve, 100))
+        
         // Refresh router to ensure data is fetched with new session
         router.refresh()
-        router.push("/")
+        
+        // Use window.location for a full page reload to ensure session cookies are set
+        window.location.href = "/"
       } else {
         setError("Failed to sign in. Please try again.")
       }

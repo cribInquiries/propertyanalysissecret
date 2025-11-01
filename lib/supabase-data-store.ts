@@ -39,19 +39,32 @@ export class SupabaseDataStore {
     try {
       const supabase = createClient()
       
+      // Verify user is authenticated
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError || !user) {
+        console.warn('User not authenticated, cannot load data')
+        return null
+      }
+
       const { data, error } = await supabase
         .from('user_data')
         .select('data_value')
         .eq('user_id', userId)
         .eq('data_key', key)
-        .single()
+        .maybeSingle()
 
       if (error) {
         if (error.code === 'PGRST116') {
-          // No rows found
+          // No rows found - this is normal
           return null
         }
-        throw new Error(`Failed to load data: ${error.message}`)
+        // For authentication/authorization errors, return null instead of throwing
+        if (error.code === 'PGRST301' || error.message.includes('JWT') || error.message.includes('permission')) {
+          console.warn('Authentication error loading data:', error.message)
+          return null
+        }
+        console.error('Error loading user data:', error)
+        return null
       }
 
       return data?.data_value as T

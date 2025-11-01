@@ -105,7 +105,15 @@ export class SupabaseAuth {
         return { user: null, error: error.message }
       }
 
-      if (data.user) {
+      if (data.user && data.session) {
+        // Verify session is properly set by checking user
+        const { data: { user: verifiedUser }, error: verifyError } = await supabase.auth.getUser()
+        
+        if (verifyError || !verifiedUser) {
+          console.error('Session verification failed:', verifyError)
+          return { user: null, error: 'Session could not be established' }
+        }
+
         // Get user profile from our custom table (use maybeSingle to handle missing profiles)
         const { data: profile, error: profileError } = await supabase
           .from('user_profiles')
