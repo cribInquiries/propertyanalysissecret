@@ -13,7 +13,6 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
-import { DataMigrationDialog } from "@/components/data-migration-dialog"
 
 interface User {
   id: string
@@ -67,21 +66,20 @@ export function UserNav({ user: initialUser }: UserNavProps) {
   }
 
   return (
-    <div className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-slate-200">
+    <div className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-border">
       <div className="container mx-auto px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <span className="text-xl">🏢</span>
-            <span className="font-bold text-slate-900">LuxeAnalytics</span>
+            <span className="font-bold text-foreground">LuxeAnalytics</span>
           </div>
 
           <div className="flex items-center gap-2">
-            <DataMigrationDialog />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                 <Avatar className="h-8 w-8">
-                  <AvatarFallback className="bg-slate-100 text-slate-700">
+                  <AvatarFallback className="bg-muted text-muted-foreground">
                     {getInitials(currentUser.email || "")}
                   </AvatarFallback>
                 </Avatar>

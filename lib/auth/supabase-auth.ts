@@ -49,10 +49,35 @@ export class SupabaseAuth {
       }
 
       if (data.user) {
+        // Ensure profile is created (trigger might not have fired or might not exist)
+        const displayNameValue = displayName || email.split('@')[0]
+        const { data: existingProfile } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('id', data.user.id)
+          .maybeSingle()
+
+        if (!existingProfile) {
+          // Create profile if it doesn't exist
+          const { error: profileError } = await supabase
+            .from('user_profiles')
+            .insert({
+              id: data.user.id,
+              email: data.user.email!,
+              display_name: displayNameValue,
+              avatar_url: data.user.user_metadata?.avatar_url,
+            })
+
+          if (profileError) {
+            console.error('Failed to create user profile:', profileError)
+            // Continue anyway, as the auth user was created
+          }
+        }
+
         const user: User = {
           id: data.user.id,
           email: data.user.email!,
-          display_name: data.user.user_metadata?.display_name,
+          display_name: displayNameValue,
           avatar_url: data.user.user_metadata?.avatar_url,
         }
         return { user, error: null }
@@ -81,18 +106,53 @@ export class SupabaseAuth {
       }
 
       if (data.user) {
-        // Get user profile from our custom table
-        const { data: profile } = await supabase
+        // Get user profile from our custom table (use maybeSingle to handle missing profiles)
+        const { data: profile, error: profileError } = await supabase
           .from('user_profiles')
           .select('*')
           .eq('id', data.user.id)
-          .single()
+          .maybeSingle()
+
+        // If profile doesn't exist, create it
+        if (!profile && !profileError) {
+          const displayName = data.user.user_metadata?.display_name || email.split('@')[0]
+          const { error: insertError } = await supabase
+            .from('user_profiles')
+            .insert({
+              id: data.user.id,
+              email: data.user.email!,
+              display_name: displayName,
+              avatar_url: data.user.user_metadata?.avatar_url,
+            })
+
+          if (insertError) {
+            console.error('Failed to create user profile:', insertError)
+            // Continue with basic user info even if profile creation fails
+          } else {
+            // Fetch the newly created profile
+            const { data: newProfile } = await supabase
+              .from('user_profiles')
+              .select('*')
+              .eq('id', data.user.id)
+              .maybeSingle()
+
+            const user: User = {
+              id: data.user.id,
+              email: data.user.email!,
+              display_name: newProfile?.display_name || displayName,
+              avatar_url: newProfile?.avatar_url,
+              created_at: newProfile?.created_at,
+              updated_at: newProfile?.updated_at,
+            }
+            return { user, error: null }
+          }
+        }
 
         const user: User = {
           id: data.user.id,
           email: data.user.email!,
-          display_name: profile?.display_name,
-          avatar_url: profile?.avatar_url,
+          display_name: profile?.display_name || data.user.user_metadata?.display_name || email.split('@')[0],
+          avatar_url: profile?.avatar_url || data.user.user_metadata?.avatar_url,
           created_at: profile?.created_at,
           updated_at: profile?.updated_at,
         }
@@ -123,22 +183,54 @@ export class SupabaseAuth {
         return null
       }
 
-      // Get user profile from our custom table
-      const { data: profile } = await supabase
+      // Get user profile from our custom table (use maybeSingle to handle missing profiles)
+      const { data: profile, error: profileError } = await supabase
         .from('user_profiles')
         .select('*')
         .eq('id', user.id)
-        .single()
+        .maybeSingle()
+
+      // If profile doesn't exist, create it
+      if (!profile && !profileError) {
+        const displayName = user.user_metadata?.display_name || user.email?.split('@')[0] || 'User'
+        const { error: insertError } = await supabase
+          .from('user_profiles')
+          .insert({
+            id: user.id,
+            email: user.email!,
+            display_name: displayName,
+            avatar_url: user.user_metadata?.avatar_url,
+          })
+
+        if (!insertError) {
+          // Fetch the newly created profile
+          const { data: newProfile } = await supabase
+            .from('user_profiles')
+            .select('*')
+            .eq('id', user.id)
+            .maybeSingle()
+
+          return {
+            id: user.id,
+            email: user.email!,
+            display_name: newProfile?.display_name || displayName,
+            avatar_url: newProfile?.avatar_url,
+            created_at: newProfile?.created_at,
+            updated_at: newProfile?.updated_at,
+          }
+        }
+      }
 
       return {
         id: user.id,
         email: user.email!,
-        display_name: profile?.display_name,
-        avatar_url: profile?.avatar_url,
+        display_name: profile?.display_name || user.user_metadata?.display_name || user.email?.split('@')[0],
+        avatar_url: profile?.avatar_url || user.user_metadata?.avatar_url,
         created_at: profile?.created_at,
         updated_at: profile?.updated_at,
       }
     } catch (error) {
+      console.error('Error getting current user:', error)
       return null
     }
   }
@@ -152,19 +244,48 @@ export class SupabaseAuth {
         return { user: null, error: 'Not authenticated' }
       }
 
-      const { data, error } = await supabase
+      // Check if profile exists
+      const { data: existingProfile } = await supabase
         .from('user_profiles')
-        .update({
-          display_name: updates.display_name,
-          avatar_url: updates.avatar_url,
-          updated_at: new Date().toISOString(),
-        })
+        .select('*')
         .eq('id', user.id)
-        .select()
-        .single()
+        .maybeSingle()
 
-      if (error) {
-        return { user: null, error: error.message }
+      let data
+      if (!existingProfile) {
+        // Create profile if it doesn't exist
+        const { data: newProfile, error: insertError } = await supabase
+          .from('user_profiles')
+          .insert({
+            id: user.id,
+            email: user.email!,
+            display_name: updates.display_name || user.user_metadata?.display_name || user.email?.split('@')[0],
+            avatar_url: updates.avatar_url || user.user_metadata?.avatar_url,
+          })
+          .select()
+          .single()
+
+        if (insertError) {
+          return { user: null, error: insertError.message }
+        }
+        data = newProfile
+      } else {
+        // Update existing profile
+        const { data: updatedProfile, error: updateError } = await supabase
+          .from('user_profiles')
+          .update({
+            display_name: updates.display_name,
+            avatar_url: updates.avatar_url,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', user.id)
+          .select()
+          .single()
+
+        if (updateError) {
+          return { user: null, error: updateError.message }
+        }
+        data = updatedProfile
       }
 
       const updatedUser: User = {
@@ -196,22 +317,54 @@ export class SupabaseAuth {
         return null
       }
 
-      // Get user profile from our custom table
-      const { data: profile } = await supabase
+      // Get user profile from our custom table (use maybeSingle to handle missing profiles)
+      const { data: profile, error: profileError } = await supabase
         .from('user_profiles')
         .select('*')
         .eq('id', user.id)
-        .single()
+        .maybeSingle()
+
+      // If profile doesn't exist, create it
+      if (!profile && !profileError) {
+        const displayName = user.user_metadata?.display_name || user.email?.split('@')[0] || 'User'
+        const { error: insertError } = await supabase
+          .from('user_profiles')
+          .insert({
+            id: user.id,
+            email: user.email!,
+            display_name: displayName,
+            avatar_url: user.user_metadata?.avatar_url,
+          })
+
+        if (!insertError) {
+          // Fetch the newly created profile
+          const { data: newProfile } = await supabase
+            .from('user_profiles')
+            .select('*')
+            .eq('id', user.id)
+            .maybeSingle()
+
+          return {
+            id: user.id,
+            email: user.email!,
+            display_name: newProfile?.display_name || displayName,
+            avatar_url: newProfile?.avatar_url,
+            created_at: newProfile?.created_at,
+            updated_at: newProfile?.updated_at,
+          }
+        }
+      }
 
       return {
         id: user.id,
         email: user.email!,
-        display_name: profile?.display_name,
-        avatar_url: profile?.avatar_url,
+        display_name: profile?.display_name || user.user_metadata?.display_name || user.email?.split('@')[0],
+        avatar_url: profile?.avatar_url || user.user_metadata?.avatar_url,
         created_at: profile?.created_at,
         updated_at: profile?.updated_at,
       }
     } catch (error) {
+      console.error('Error getting current user (server):', error)
       return null
     }
   }

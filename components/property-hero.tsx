@@ -50,9 +50,10 @@ export function PropertyHero() {
 
       <motion.div
         initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
+        animate={{ opacity: 0 }}
         transition={{ delay: 1.5 }}
         className="absolute top-8 right-8 z-20"
+        style={{ opacity: 0 }}
       >
         {!isEditing ? (
           <Button

@@ -34,7 +34,11 @@ export default function LoginPage() {
 
       if (authError) throw new Error(authError)
       if (user) {
+        // Refresh router to ensure data is fetched with new session
+        router.refresh()
         router.push("/")
+      } else {
+        setError("Failed to sign in. Please try again.")
       }
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "An error occurred during sign in")
