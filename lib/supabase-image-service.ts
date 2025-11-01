@@ -56,7 +56,7 @@ class SupabaseImageService {
       const fileId = this.generateFileId()
       const safeName = this.sanitizeFileName(file.name)
       const fileName = `${fileId}-${safeName}`
-      const folder = options.folder || 'general'
+      const folder = options.folder || options.category || 'general'
       const filePath = `${options.userId}/${folder}/${fileName}`
 
       // Upload to Supabase Storage

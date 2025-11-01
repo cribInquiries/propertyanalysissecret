@@ -13,6 +13,7 @@ export async function POST(request: Request) {
     const file = form.get("file") as File | null
     const userId = (form.get("userId") as string) || "anon"
     const category = (form.get("category") as string) || "general"
+    const folder = (form.get("folder") as string) || category // Use folder if provided, otherwise use category
     const description = (form.get("description") as string) || ""
     const tags = (form.get("tags") as string) || ""
     const maxWidth = form.get("maxWidth") ? parseInt(form.get("maxWidth") as string) : undefined
@@ -80,6 +81,7 @@ export async function POST(request: Request) {
     const uploadOptions: ImageUploadOptions = {
       userId,
       category,
+      folder,
       description: description || undefined,
       tags: tags ? tags.split(',').map(tag => tag.trim()) : undefined,
       maxWidth,

@@ -10,6 +10,7 @@ import { MapPin, Award, Users, TrendingUp, Shield, Edit3, Save, X, Upload, Plus,
 import { useEffect, useState } from "react"
 import { supabaseAuth } from "@/lib/auth/supabase-auth"
 import { supabaseDataStore } from "@/lib/supabase-data-store"
+import { toast } from "@/hooks/use-toast"
 
 const CompanyPortfolio = () => {
   const [isEditing, setIsEditing] = useState(false)
@@ -190,15 +191,29 @@ const CompanyPortfolio = () => {
   const handleImageUpload = async (id: number, event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
+
+    // Require authentication
+    const user = await supabaseAuth.getCurrentUser()
+    if (!user || !user.id) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to upload images. All images are stored in your account.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    const currentUserId = user.id
+
     try {
       const form = new FormData()
-      const user = await supabaseAuth.getCurrentUser()
-      const currentUserId = user?.id || "anon"
       form.append("file", file)
       form.append("userId", currentUserId)
       form.append("folder", "portfolio")
+      form.append("category", "portfolio")
 
       const res = await fetch("/api/upload", { method: "POST", body: form, cache: "no-store" })
+      
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}))
         console.error("Upload failed:", {
@@ -206,57 +221,26 @@ const CompanyPortfolio = () => {
           statusText: res.statusText,
           error: errorData
         })
-        throw new Error(`Upload failed: ${errorData.error || res.statusText}`)
+        throw new Error(errorData.error || `Upload failed: ${res.statusText}`)
       }
+
       const { url } = await res.json()
       updateProperty(id, "image", url)
       
-      // persist immediately
+      // Persist immediately to account
       const next = {
         ...editableData,
         portfolioProperties: editableData.portfolioProperties.map((p) => (p.id === id ? { ...p, image: url } : p)),
       }
       
-      try {
-        if (currentUserId !== "anon") {
-          await supabaseDataStore.saveUserData(currentUserId, STORAGE_KEY, next)
-        } else {
-          localStorage.setItem(`company_portfolio_${currentUserId}`, JSON.stringify(next))
-        }
-      } catch (error) {
-        console.error("Failed to save image data:", error)
-        // Fallback to local storage
-        localStorage.setItem(`company_portfolio_${currentUserId}`, JSON.stringify(next))
-      }
+      await supabaseDataStore.saveUserData(currentUserId, STORAGE_KEY, next)
     } catch (e) {
       console.error("Upload error", e)
-      // Fallback to data URL so UI updates even if remote fails
-      try {
-        const reader = new FileReader()
-        reader.onload = async () => {
-          const dataUrl = reader.result as string
-          updateProperty(id, "image", dataUrl)
-          const next = {
-            ...editableData,
-            portfolioProperties: editableData.portfolioProperties.map((p) =>
-              p.id === id ? { ...p, image: dataUrl } : p,
-            ),
-          }
-          
-          // Save the fallback data URL
-          try {
-            if (userId && userId !== "anon") {
-              await supabaseDataStore.saveUserData(userId, STORAGE_KEY, next)
-            } else {
-              localStorage.setItem(`company_portfolio_${userId}`, JSON.stringify(next))
-            }
-          } catch (error) {
-            console.error("Failed to save fallback image data:", error)
-            localStorage.setItem(`company_portfolio_${userId}`, JSON.stringify(next))
-          }
-        }
-        reader.readAsDataURL(file)
-      } catch {}
+      toast({
+        title: "Upload failed",
+        description: e instanceof Error ? e.message : "Failed to upload image. Please try again.",
+        variant: "destructive",
+      })
     }
   }
 

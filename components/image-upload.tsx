@@ -5,9 +5,8 @@ import { useDropzone } from "react-dropzone"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
-import { X, Upload, ImageIcon } from "lucide-react"
+import { X, Upload, ImageIcon, Lock } from "lucide-react"
 import { supabaseAuth } from "@/lib/auth/supabase-auth"
-import { supabaseDataStore } from "@/lib/supabase-data-store"
 import { toast } from "@/hooks/use-toast"
 
 interface ImageUploadProps {
@@ -45,28 +44,100 @@ export function ImageUpload({
 }: ImageUploadProps) {
   const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([])
   const [uploadedImages, setUploadedImages] = useState<StoredImage[]>([])
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false)
+  const [loading, setLoading] = useState<boolean>(true)
 
-  // Load previously saved images for this user on mount
+  // Check authentication and load images from Supabase
   useEffect(() => {
-    const user = getCurrentUser()
-    const STORAGE_KEY = `property_images_${user?.id || "anon"}`
-    const existing = readJson<StoredImage[]>(STORAGE_KEY, [])
-    setUploadedImages(existing)
-  }, [])
+    const loadImages = async () => {
+      try {
+        setLoading(true)
+        const user = await supabaseAuth.getCurrentUser()
+        
+        if (!user || !user.id) {
+          setIsAuthenticated(false)
+          setUploadedImages([])
+          return
+        }
+
+        setIsAuthenticated(true)
+        const currentUserId = user.id
+
+        // Load from Supabase via API
+        try {
+          const res = await fetch(`/api/upload?userId=${encodeURIComponent(currentUserId)}&category=property-images`)
+          
+          if (!res.ok) {
+            if (res.status === 401) {
+              setIsAuthenticated(false)
+              setUploadedImages([])
+              return
+            }
+            throw new Error(`Failed to load images: ${res.statusText}`)
+          }
+
+          const { images } = await res.json()
+          if (images && Array.isArray(images)) {
+            // Map Supabase image metadata to StoredImage format
+            const mappedImages: StoredImage[] = images.map((img: any) => ({
+              id: img.id,
+              user_id: img.user_id || currentUserId,
+              property_analysis_id: propertyAnalysisId || null,
+              file_name: img.original_name || img.filename,
+              file_path: img.path,
+              file_size: img.size || 0,
+              mime_type: img.mime_type,
+              upload_status: "completed" as const,
+              publicUrl: img.url,
+              alt_text: img.description,
+            }))
+            setUploadedImages(mappedImages)
+          } else {
+            setUploadedImages([])
+          }
+        } catch (error) {
+          console.error("Error loading images from Supabase:", error)
+          toast({
+            title: "Failed to load images",
+            description: "Unable to load images from your account. Please try refreshing the page.",
+            variant: "destructive",
+          })
+          setUploadedImages([])
+        }
+      } catch (error) {
+        console.error("Error checking authentication:", error)
+        setIsAuthenticated(false)
+        setUploadedImages([])
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    loadImages()
+  }, [propertyAnalysisId])
 
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
-      const user = getCurrentUser()
-      if (!user) {
-        toast({ title: "Not signed in", description: "Guest mode: uploads are stored locally" })
+      // Require authentication
+      const user = await supabaseAuth.getCurrentUser()
+      
+      if (!user || !user.id) {
+        toast({ 
+          title: "Authentication required", 
+          description: "Please sign in to upload images. All images are stored in your account.",
+          variant: "destructive",
+        })
+        return
       }
+
+      const currentUserId = user.id
 
       // Check file size
       const validFiles = acceptedFiles.filter((file) => {
         if (file.size > maxSize) {
           toast({
             title: "File too large",
-            description: `${file.name} is larger than 5MB`,
+            description: `${file.name} is larger than ${Math.round(maxSize / 1024 / 1024)}MB`,
             variant: "destructive",
           })
           return false
@@ -94,39 +165,55 @@ export function ImageUpload({
 
       setUploadingFiles((prev) => [...prev, ...newUploadingFiles])
 
-      // Upload each file
+      // Upload each file to Supabase
       for (const uploadingFile of newUploadingFiles) {
         try {
           const { file, id } = uploadingFile
-          const fileExt = file.name.split(".").pop()
-          const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
-          const filePath = `property-images/${fileName}`
+          
+          // Update progress
+          setUploadingFiles((prev) => prev.map((f) => 
+            f.id === id ? { ...f, progress: 25 } : f
+          ))
 
-          // Convert to data URL for local storage preview
-          const dataUrl = await new Promise<string>((resolve, reject) => {
-            const reader = new FileReader()
-            reader.onload = () => resolve(reader.result as string)
-            reader.onerror = (e) => reject(e)
-            reader.readAsDataURL(file)
+          // Upload to Supabase via API
+          setUploadingFiles((prev) => prev.map((f) => 
+            f.id === id ? { ...f, progress: 50 } : f
+          ))
+
+          const form = new FormData()
+          form.append("file", file)
+          form.append("userId", currentUserId)
+          form.append("category", "property-images")
+
+          const res = await fetch("/api/upload", { 
+            method: "POST", 
+            body: form, 
+            cache: "no-store" 
           })
 
-          const imageRecord: StoredImage = {
-            id: generateId(),
-            user_id: user?.id || "anon",
-            property_analysis_id: propertyAnalysisId || null,
-            file_name: file.name,
-            file_path: filePath,
-            file_size: file.size,
-            mime_type: file.type,
-            upload_status: "completed" as const,
-            publicUrl: dataUrl,
+          if (!res.ok) {
+            const errorData = await res.json().catch(() => ({}))
+            throw new Error(errorData.error || `Upload failed: ${res.statusText}`)
           }
 
-          const STORAGE_KEY = `property_images_${imageRecord.user_id}`
-          const existing = readJson<StoredImage[]>(STORAGE_KEY, [])
-          const next = [...existing, imageRecord]
-          writeJson(STORAGE_KEY, next)
-          remoteSave(imageRecord.user_id, STORAGE_KEY, next).catch(() => {})
+          const { url, metadata } = await res.json()
+
+          setUploadingFiles((prev) => prev.map((f) => 
+            f.id === id ? { ...f, progress: 90 } : f
+          ))
+
+          const imageRecord: StoredImage = {
+            id: metadata?.id || metadata?.metadata?.id || id,
+            user_id: currentUserId,
+            property_analysis_id: propertyAnalysisId || null,
+            file_name: metadata?.metadata?.originalName || metadata?.filename || file.name,
+            file_path: metadata?.metadata?.path || metadata?.path || `property-images/${file.name}`,
+            file_size: metadata?.metadata?.size || metadata?.size || file.size,
+            mime_type: metadata?.metadata?.mimeType || metadata?.mime_type || file.type,
+            upload_status: "completed" as const,
+            publicUrl: url,
+            alt_text: metadata?.metadata?.description || metadata?.description,
+          }
 
           setUploadingFiles((prev) => prev.filter((f) => f.id !== id))
           setUploadedImages((prev) => [...prev, imageRecord])
@@ -135,14 +222,14 @@ export function ImageUpload({
 
           toast({
             title: "Upload successful",
-            description: `${file.name} uploaded successfully`,
+            description: `${file.name} uploaded successfully to your account`,
           })
         } catch (error) {
           console.error("Upload error:", error)
           setUploadingFiles((prev) => prev.map((f) => (f.id === uploadingFile.id ? { ...f, status: "error" } : f)))
           toast({
             title: "Upload failed",
-            description: `Failed to upload ${uploadingFile.file.name}`,
+            description: `Failed to upload ${uploadingFile.file.name}: ${error instanceof Error ? error.message : "Unknown error"}`,
             variant: "destructive",
           })
         }
@@ -162,25 +249,71 @@ export function ImageUpload({
 
   const removeImage = async (imageId: string) => {
     try {
+      const user = await supabaseAuth.getCurrentUser()
+      
+      if (!user || !user.id) {
+        toast({
+          title: "Authentication required",
+          description: "Please sign in to delete images",
+          variant: "destructive",
+        })
+        return
+      }
+
+      const currentUserId = user.id
+
+      // Delete from Supabase storage
+      const res = await fetch(`/api/upload?userId=${encodeURIComponent(currentUserId)}&imageId=${encodeURIComponent(imageId)}`, {
+        method: "DELETE",
+      })
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}))
+        throw new Error(errorData.error || `Delete failed: ${res.statusText}`)
+      }
+
+      // Update local state
       setUploadedImages((prev) => prev.filter((img) => img.id !== imageId))
-      const user = getCurrentUser()
-      const STORAGE_KEY = `property_images_${user?.id || "anon"}`
-      const existing = readJson<StoredImage[]>(STORAGE_KEY, [])
-      const next = existing.filter((img) => img.id !== imageId)
-      writeJson(STORAGE_KEY, next)
-      remoteSave(user?.id || "anon", STORAGE_KEY, next).catch(() => {})
+      
       toast({
         title: "Image removed",
-        description: "Image deleted successfully",
+        description: "Image deleted successfully from your account",
       })
     } catch (error) {
       console.error("Delete error:", error)
       toast({
         title: "Delete failed",
-        description: "Failed to delete image",
+        description: error instanceof Error ? error.message : "Failed to delete image",
         variant: "destructive",
       })
     }
+  }
+
+  // Show authentication required message if not authenticated
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="p-6 text-center">
+          <p className="text-muted-foreground">Loading images...</p>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <Card>
+        <CardContent className="p-6 text-center space-y-4">
+          <Lock className="mx-auto h-12 w-12 text-muted-foreground" />
+          <div>
+            <p className="text-lg font-medium mb-2">Authentication Required</p>
+            <p className="text-sm text-muted-foreground">
+              Please sign in to upload and manage images. All images are stored securely in your account.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    )
   }
 
   return (
@@ -199,7 +332,9 @@ export function ImageUpload({
             <p className="text-lg font-medium mb-2">{isDragActive ? "Drop images here" : "Upload property images"}</p>
             <p className="text-sm text-muted-foreground mb-4">Drag and drop images here, or click to select files</p>
             <p className="text-xs text-muted-foreground">
-              Supports JPEG, PNG, WebP, GIF up to 5MB each. Max {maxFiles} files.
+              Supports JPEG, PNG, WebP, GIF up to {Math.round(maxSize / 1024 / 1024)}MB each. Max {maxFiles} files.
+              <br />
+              Images are stored in your account.
             </p>
           </div>
         </CardContent>
