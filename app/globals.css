@@ -88,5 +88,45 @@
   }
   body {
     @apply bg-background text-foreground;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+  
+  /* Apple-style smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  /* Improved focus states */
+  *:focus-visible {
+    outline-offset: 2px;
+    transition: outline-offset 0.15s ease-in-out;
+  }
+}
+
+@layer utilities {
+  /* Apple-style backdrop blur */
+  .backdrop-blur-apple {
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+  }
+  
+  /* Subtle glow effect */
+  .glow-subtle {
+    box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.08), 
+                0 4px 16px -4px rgba(0, 0, 0, 0.04);
+  }
+  
+  /* Enhanced hover lift */
+  .hover-lift {
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.12),
+                0 8px 24px -4px rgba(0, 0, 0, 0.08);
   }
 }

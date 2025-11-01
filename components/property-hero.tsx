@@ -43,10 +43,10 @@ export function PropertyHero() {
       <img
         src={heroData.backgroundImage}
         alt="Property backdrop"
-        className="absolute inset-0 w-full h-full object-cover object-center scale-105"
+        className="absolute inset-0 w-full h-full object-cover object-center scale-105 transition-transform duration-[20s] ease-out"
       />
       {/* Soft vignette to improve text contrast while keeping image visible */}
-      <div className="absolute inset-0 bg-black/35 md:bg-black/30" />
+      <div className="absolute inset-0 bg-black/35 md:bg-black/30 transition-opacity duration-500" />
 
       <motion.div
         initial={{ opacity: 0 }}

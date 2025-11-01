@@ -1,8 +1,5 @@
 'use client'
 
-export const dynamic = 'force-dynamic'
-export const revalidate = 0
-
 import React, { useState } from 'react'
 import { VapiVoiceAssistant } from '@/components/vapi-voice-assistant'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'

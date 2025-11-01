@@ -61,13 +61,17 @@ export function AnalysisOverview() {
               key={index}
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: index * 0.1 }}
-              viewport={{ once: true }}
+              transition={{ 
+                duration: 0.6, 
+                delay: index * 0.1,
+                ease: [0.4, 0, 0.2, 1] // Apple-style easing
+              }}
+              viewport={{ once: true, margin: "-50px" }}
             >
-              <Card className="p-8 h-full hover:shadow-lg transition-shadow duration-300 border-border/50">
+              <Card className="p-8 h-full border-border/50 group">
                 <div className="flex flex-col items-center text-center">
-                  <div className="w-16 h-16 bg-accent/10 rounded-full flex items-center justify-center mb-6">
-                    <step.icon className="w-8 h-8 text-accent" />
+                  <div className="w-16 h-16 bg-accent/10 rounded-full flex items-center justify-center mb-6 transition-all duration-300 ease-out group-hover:bg-accent/20 group-hover:scale-110">
+                    <step.icon className="w-8 h-8 text-accent transition-transform duration-300 ease-out group-hover:scale-110" />
                   </div>
                   <h3 className="text-xl font-semibold text-foreground mb-4">{step.title}</h3>
                   <p className="text-muted-foreground text-balance">{step.description}</p>

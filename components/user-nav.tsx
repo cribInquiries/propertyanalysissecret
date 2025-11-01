@@ -66,7 +66,7 @@ export function UserNav({ user: initialUser }: UserNavProps) {
   }
 
   return (
-    <div className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-border">
+    <div className="sticky top-0 z-50 bg-white/95 backdrop-blur-apple border-b border-border transition-all duration-300">
       <div className="container mx-auto px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
