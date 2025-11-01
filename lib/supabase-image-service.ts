@@ -31,12 +31,40 @@ export interface ImageUploadOptions {
 
 class SupabaseImageService {
   private supabase: any
+  private initialized: boolean = false
 
-  constructor() {
-    this.supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
+  private initialize() {
+    if (this.initialized && this.supabase) {
+      return
+    }
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key'
+
+    // Only initialize if we have valid credentials
+    if (!supabaseUrl || supabaseUrl === 'https://placeholder.supabase.co' || !supabaseKey || supabaseKey === 'placeholder-key') {
+      // Return a mock client that throws errors when used
+      this.supabase = {
+        storage: {
+          from: () => ({
+            upload: async () => ({ error: { message: 'Supabase not configured' } }),
+            getPublicUrl: () => ({ data: { publicUrl: '' } }),
+            remove: async () => ({ error: { message: 'Supabase not configured' } })
+          })
+        },
+        from: () => ({
+          select: () => ({ eq: () => ({ order: () => ({ data: null, error: { message: 'Supabase not configured' } }) }) }),
+          insert: async () => ({ error: { message: 'Supabase not configured' } }),
+          update: () => ({ eq: () => ({ error: { message: 'Supabase not configured' } }) }),
+          delete: () => ({ eq: () => ({ error: { message: 'Supabase not configured' } }) })
+        })
+      }
+      this.initialized = true
+      return
+    }
+
+    this.supabase = createClient(supabaseUrl, supabaseKey)
+    this.initialized = true
   }
 
   /**
@@ -46,6 +74,7 @@ class SupabaseImageService {
     file: File,
     options: ImageUploadOptions
   ): Promise<{ url: string; metadata: ImageMetadata }> {
+    this.initialize()
     try {
       // Validate file
       if (!this.isValidImageFile(file)) {
@@ -113,6 +142,7 @@ class SupabaseImageService {
    * Get all images for a user
    */
   async getUserImages(userId: string, category?: string): Promise<ImageMetadata[]> {
+    this.initialize()
     try {
       let query = this.supabase
         .from('image_metadata')
@@ -141,6 +171,7 @@ class SupabaseImageService {
    * Delete an image and its metadata
    */
   async deleteImage(userId: string, imageId: string): Promise<boolean> {
+    this.initialize()
     try {
       // Get image metadata
       const { data: metadata, error: fetchError } = await this.supabase
@@ -189,6 +220,7 @@ class SupabaseImageService {
     imageId: string,
     updates: Partial<Pick<ImageMetadata, 'description' | 'tags' | 'category'>>
   ): Promise<boolean> {
+    this.initialize()
     try {
       const { error } = await this.supabase
         .from('image_metadata')
