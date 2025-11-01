@@ -38,29 +38,20 @@ class SupabaseImageService {
       return
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key'
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-    // Only initialize if we have valid credentials
-    if (!supabaseUrl || supabaseUrl === 'https://placeholder.supabase.co' || !supabaseKey || supabaseKey === 'placeholder-key') {
-      // Return a mock client that throws errors when used
-      this.supabase = {
-        storage: {
-          from: () => ({
-            upload: async () => ({ error: { message: 'Supabase not configured' } }),
-            getPublicUrl: () => ({ data: { publicUrl: '' } }),
-            remove: async () => ({ error: { message: 'Supabase not configured' } })
-          })
-        },
-        from: () => ({
-          select: () => ({ eq: () => ({ order: () => ({ data: null, error: { message: 'Supabase not configured' } }) }) }),
-          insert: async () => ({ error: { message: 'Supabase not configured' } }),
-          update: () => ({ eq: () => ({ error: { message: 'Supabase not configured' } }) }),
-          delete: () => ({ eq: () => ({ error: { message: 'Supabase not configured' } }) })
-        })
-      }
-      this.initialized = true
-      return
+    // Require valid Supabase configuration
+    if (!supabaseUrl || (!supabaseServiceKey && !supabaseAnonKey)) {
+      throw new Error('Supabase configuration missing: NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY or NEXT_PUBLIC_SUPABASE_ANON_KEY must be set')
+    }
+
+    // Prefer service role key for server-side operations, fallback to anon key
+    const supabaseKey = supabaseServiceKey || supabaseAnonKey
+
+    if (!supabaseKey) {
+      throw new Error('Supabase key not found: SUPABASE_SERVICE_ROLE_KEY or NEXT_PUBLIC_SUPABASE_ANON_KEY must be set')
     }
 
     this.supabase = createClient(supabaseUrl, supabaseKey)
