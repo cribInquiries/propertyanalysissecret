@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { SUPABASE_ANON_KEY, SUPABASE_URL } from './supabase/config'
 
 export interface BulkOperation<T> {
   type: 'insert' | 'update' | 'upsert' | 'delete'
@@ -337,7 +338,4 @@ export class DataMigrationManager {
   }
 }
 
-export const bulkOperationsManager = new BulkOperationsManager(createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key'
-))
+export const bulkOperationsManager = new BulkOperationsManager(createClient(SUPABASE_URL, SUPABASE_ANON_KEY))

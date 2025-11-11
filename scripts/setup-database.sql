@@ -45,53 +45,57 @@ ALTER TABLE public.property_analyses ENABLE ROW LEVEL SECURITY;
 -- Create policies for user_profiles
 DROP POLICY IF EXISTS "Users can view own profile" ON public.user_profiles;
 CREATE POLICY "Users can view own profile" ON public.user_profiles
-  FOR SELECT USING (auth.uid() = id);
+  FOR SELECT USING ((select auth.uid()) = id);
 
 DROP POLICY IF EXISTS "Users can update own profile" ON public.user_profiles;
 CREATE POLICY "Users can update own profile" ON public.user_profiles
-  FOR UPDATE USING (auth.uid() = id);
+  FOR UPDATE USING ((select auth.uid()) = id);
 
 DROP POLICY IF EXISTS "Users can insert own profile" ON public.user_profiles;
 CREATE POLICY "Users can insert own profile" ON public.user_profiles
-  FOR INSERT WITH CHECK (auth.uid() = id);
+  FOR INSERT WITH CHECK ((select auth.uid()) = id);
 
 -- Create policies for user_data
 DROP POLICY IF EXISTS "Users can view own data" ON public.user_data;
 CREATE POLICY "Users can view own data" ON public.user_data
-  FOR SELECT USING (auth.uid() = user_id);
+  FOR SELECT USING ((select auth.uid()) = user_id);
 
 DROP POLICY IF EXISTS "Users can insert own data" ON public.user_data;
 CREATE POLICY "Users can insert own data" ON public.user_data
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
+  FOR INSERT WITH CHECK ((select auth.uid()) = user_id);
 
 DROP POLICY IF EXISTS "Users can update own data" ON public.user_data;
 CREATE POLICY "Users can update own data" ON public.user_data
-  FOR UPDATE USING (auth.uid() = user_id);
+  FOR UPDATE USING ((select auth.uid()) = user_id);
 
 DROP POLICY IF EXISTS "Users can delete own data" ON public.user_data;
 CREATE POLICY "Users can delete own data" ON public.user_data
-  FOR DELETE USING (auth.uid() = user_id);
+  FOR DELETE USING ((select auth.uid()) = user_id);
 
 -- Create policies for property_analyses
 DROP POLICY IF EXISTS "Users can view own analyses" ON public.property_analyses;
 CREATE POLICY "Users can view own analyses" ON public.property_analyses
-  FOR SELECT USING (auth.uid() = user_id);
+  FOR SELECT USING ((select auth.uid()) = user_id);
 
 DROP POLICY IF EXISTS "Users can insert own analyses" ON public.property_analyses;
 CREATE POLICY "Users can insert own analyses" ON public.property_analyses
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
+  FOR INSERT WITH CHECK ((select auth.uid()) = user_id);
 
 DROP POLICY IF EXISTS "Users can update own analyses" ON public.property_analyses;
 CREATE POLICY "Users can update own analyses" ON public.property_analyses
-  FOR UPDATE USING (auth.uid() = user_id);
+  FOR UPDATE USING ((select auth.uid()) = user_id);
 
 DROP POLICY IF EXISTS "Users can delete own analyses" ON public.property_analyses;
 CREATE POLICY "Users can delete own analyses" ON public.property_analyses
-  FOR DELETE USING (auth.uid() = user_id);
+  FOR DELETE USING ((select auth.uid()) = user_id);
 
 -- Create function to automatically create user profile on signup
 CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
 BEGIN
   INSERT INTO public.user_profiles (id, email, display_name, avatar_url)
   VALUES (
@@ -102,22 +106,23 @@ BEGIN
   );
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
 
--- Create trigger to automatically create profile on user signup
-DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
 -- Create function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION public.update_updated_at_column()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = public
+AS $$
 BEGIN
   NEW.updated_at = NOW();
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 -- Create triggers for updated_at
 DROP TRIGGER IF EXISTS update_user_profiles_updated_at ON public.user_profiles;

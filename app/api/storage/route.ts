@@ -4,18 +4,25 @@ import { DataValidator } from "@/lib/data-validation"
 import { RateLimiter } from "@/lib/data-validation"
 import { securityManager } from "@/lib/security-manager"
 import { CachedDataStore } from "@/lib/cache-manager"
+import { SUPABASE_SERVICE_ROLE_KEY, SUPABASE_URL } from "@/lib/supabase/config"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
 
-// Create a simple Supabase client for API routes
-// Provide fallback values to prevent build errors when env vars are missing
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder-key'
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || SUPABASE_URL
+const supabaseServiceRoleKey =
+  process.env.SUPABASE_SERVICE_ROLE_KEY || SUPABASE_SERVICE_ROLE_KEY
 
+if (!supabaseServiceRoleKey) {
+  throw new Error(
+    'SUPABASE_SERVICE_ROLE_KEY must be set on the server to use the /api/storage route.',
+  )
+}
+
+// Create a simple Supabase client for API routes
 const supabase = createClient(
   supabaseUrl,
-  supabaseKey // Use service role key to bypass RLS for API routes
+  supabaseServiceRoleKey, // Use service role key to bypass RLS for API routes
 )
 
 const cachedDataStore = new CachedDataStore(supabase)

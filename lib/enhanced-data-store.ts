@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { imageService, ImageUploadOptions } from './image-service'
+import { SUPABASE_ANON_KEY, SUPABASE_URL } from './supabase/config'
 
 export interface DataChange {
   id: string
@@ -38,10 +39,7 @@ class EnhancedDataStore {
   private readonly MAX_BATCH_SIZE = 50
 
   constructor() {
-    this.supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key'
-    )
+    this.supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
   }
 
   /**

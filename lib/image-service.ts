@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { SUPABASE_ANON_KEY, SUPABASE_URL } from './supabase/config'
 
 export interface ImageMetadata {
   id: string
@@ -42,10 +43,7 @@ class ImageService {
   private supabase: any
 
   constructor() {
-    this.supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key'
-    )
+    this.supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
   }
 
   /**

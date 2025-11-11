@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { SUPABASE_SERVICE_ROLE_KEY, SUPABASE_URL } from './supabase/config'
 
 export interface BackupConfig {
   enabled: boolean
@@ -396,11 +397,14 @@ export const defaultBackupConfig: BackupConfig = {
 
 // Create backup manager instance (will be initialized in the API route)
 export function createBackupManager() {
+  if (!SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error(
+      'SUPABASE_SERVICE_ROLE_KEY is required to use the backup manager. Set it in the server environment.',
+    )
+  }
+
   return new BackupManager(
-    createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
-      process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder-key'
-    ),
-    defaultBackupConfig
+    createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY),
+    defaultBackupConfig,
   )
 }
