@@ -20,7 +20,6 @@ import {
   Trash2,
 } from "lucide-react"
 import { useEffect, useState } from "react"
-import { supabaseAuth } from "@/lib/auth/supabase-auth"
 import { supabaseDataStore } from "@/lib/supabase-data-store"
 
 const initialData = {
@@ -96,8 +95,7 @@ export function ValueMaximization() {
   useEffect(() => {
     const loadUserAndData = async () => {
       try {
-        const user = await supabaseAuth.getCurrentUser()
-        const currentUserId = user?.id || "anon"
+        const currentUserId = "anon"
         setUserId(currentUserId)
         
         if (currentUserId !== "anon") {

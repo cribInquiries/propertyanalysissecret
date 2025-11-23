@@ -19,7 +19,6 @@ import {
   Download,
   Eye
 } from 'lucide-react'
-import { supabaseAuth } from '@/lib/auth/supabase-auth'
 import { toast } from 'sonner'
 
 export interface ImageUploadProps {
@@ -128,14 +127,11 @@ export function EnhancedImageUpload({
     setError(null)
 
     try {
-      const user = await supabaseAuth.getCurrentUser()
-      if (!user?.id) {
-        throw new Error('Authentication required for uploads')
-      }
+      const userId = "anon"
 
       const formData = new FormData()
       formData.append('file', selectedFile)
-      formData.append('userId', user.id)
+      formData.append('userId', userId)
       formData.append('category', category)
       if (description) formData.append('description', description)
       if (tags) formData.append('tags', tags)
@@ -195,10 +191,9 @@ export function EnhancedImageUpload({
 
   const handleDeleteImage = async (imageId: string) => {
     try {
-      const user = await supabaseAuth.getCurrentUser()
-      if (!user?.id) return
+      const userId = "anon"
 
-      const response = await fetch(`/api/upload?userId=${user.id}&imageId=${imageId}`, {
+      const response = await fetch(`/api/upload?userId=${userId}&imageId=${imageId}`, {
         method: 'DELETE'
       })
 
@@ -223,8 +218,7 @@ export function EnhancedImageUpload({
     if (!editingImageId) return
 
     try {
-      const user = await supabaseAuth.getCurrentUser()
-      if (!user?.id) return
+      const userId = "anon"
 
       const response = await fetch('/api/upload', {
         method: 'PUT',
@@ -232,7 +226,7 @@ export function EnhancedImageUpload({
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          userId: user.id,
+          userId: userId,
           imageId: editingImageId,
           description: editingDescription
         })

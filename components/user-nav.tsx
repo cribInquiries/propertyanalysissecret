@@ -1,6 +1,5 @@
 "use client"
 
-import { supabaseAuth } from "@/lib/auth/supabase-auth"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -12,7 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useRouter } from "next/navigation"
-import { useState, useEffect } from "react"
+import { useState } from "react"
 
 interface User {
   id: string
@@ -27,38 +26,13 @@ interface UserNavProps {
 
 export function UserNav({ user: initialUser }: UserNavProps) {
   const router = useRouter()
-  const [isSigningOut, setIsSigningOut] = useState(false)
-  const [currentUser, setCurrentUser] = useState(initialUser)
+  const [currentUser] = useState(initialUser)
 
-  useEffect(() => {
-    // Load the actual user when component mounts
-    const loadUser = async () => {
-      try {
-        const user = await supabaseAuth.getCurrentUser()
-        if (user) {
-          setCurrentUser(user)
-        }
-      } catch (error) {
-        console.error("Error loading user:", error)
-      }
-    }
-    
-    loadUser()
-  }, [])
+  // No authentication required - use guest user
 
   const handleSignOut = async () => {
-    setIsSigningOut(true)
-    try {
-      await supabaseAuth.signOut()
-      setCurrentUser({ id: "anon", email: "guest@example.com", display_name: "Guest" })
-      router.push("/auth/login")
-    } catch (error) {
-      console.error("Error signing out:", error)
-      // Still redirect even if there's an error to ensure user is logged out
-      router.push("/auth/login")
-    } finally {
-      setIsSigningOut(false)
-    }
+    // No authentication - just refresh the page
+    router.refresh()
   }
 
   const getInitials = (email: string) => {
@@ -101,10 +75,9 @@ export function UserNav({ user: initialUser }: UserNavProps) {
               <DropdownMenuItem
                 className="cursor-pointer"
                 onClick={handleSignOut}
-                disabled={isSigningOut}
               >
-                <span className="mr-2">🚪</span>
-                <span>{isSigningOut ? "Signing out..." : "Sign out"}</span>
+                <span className="mr-2">🔄</span>
+                <span>Refresh</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
             </DropdownMenu>

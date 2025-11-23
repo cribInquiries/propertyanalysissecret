@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { supabaseAuth } from "@/lib/auth/supabase-auth"
 import { supabaseDataStore } from "@/lib/supabase-data-store"
 import { motion } from "framer-motion"
 import { Card } from "@/components/ui/card"
@@ -58,8 +57,7 @@ export function PurchaseMotivation() {
   useEffect(() => {
     const loadUserAndData = async () => {
       try {
-        const user = await supabaseAuth.getCurrentUser()
-        const currentUserId = user?.id || "anon"
+        const currentUserId = "anon"
         setUserId(currentUserId)
         
         if (currentUserId !== "anon") {

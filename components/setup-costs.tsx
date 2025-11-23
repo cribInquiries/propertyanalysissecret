@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Palette, Sofa, Wrench, Camera, Edit3, Save, X, Upload, Plus, Trash2 } from "lucide-react"
 import { useState, useRef, useEffect } from "react"
-import { supabaseAuth } from "@/lib/auth/supabase-auth"
 import { enhancedDataStore } from "@/lib/enhanced-data-store"
 import { EnhancedImageUpload } from "@/components/enhanced-image-upload"
 
@@ -59,8 +58,7 @@ export function SetupCosts() {
   useEffect(() => {
     const loadUserAndData = async () => {
       try {
-        const user = await supabaseAuth.getCurrentUser()
-        const currentUserId = user?.id || "anon"
+        const currentUserId = "anon"
         setUserId(currentUserId)
         
         if (currentUserId !== "anon") {
@@ -211,16 +209,15 @@ export function SetupCosts() {
     updateDesignInspiration(inspirationId, "image", url)
     
     // Save with enhanced metadata and change tracking
-    const user = await supabaseAuth.getCurrentUser()
-    if (user?.id) {
-      const next = {
-        ...editableData,
-        designInspirations: editableData.designInspirations.map((d) => 
-          d.id === inspirationId ? { ...d, image: url } : d
-        ),
-      }
-      
-      await enhancedDataStore.saveUserData(user.id, STORAGE_KEY, next, {
+    const userId = "anon"
+    const next = {
+      ...editableData,
+      designInspirations: editableData.designInspirations.map((d) => 
+        d.id === inspirationId ? { ...d, image: url } : d
+      ),
+    }
+    
+    await enhancedDataStore.saveUserData(userId, STORAGE_KEY, next, {
         component: 'setup-costs',
         field: 'design-inspiration',
         description: `Image uploaded: ${metadata.filename}`,

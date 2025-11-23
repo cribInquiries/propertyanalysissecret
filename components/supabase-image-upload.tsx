@@ -12,7 +12,6 @@ import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Trash2, Upload, Image as ImageIcon, X, Edit3, Save, XCircle } from 'lucide-react'
 import { toast } from 'sonner'
-import { supabaseAuth } from '@/lib/auth/supabase-auth'
 
 interface ImageMetadata {
   id: string
@@ -74,10 +73,9 @@ export function SupabaseImageUpload({
 
   const loadUserImages = async () => {
     try {
-      const user = await supabaseAuth.getCurrentUser()
-      if (!user) return
+      const userId = "anon"
 
-      const response = await fetch(`/api/upload?userId=${user.id}&category=${category}`)
+      const response = await fetch(`/api/upload?userId=${userId}&category=${category}`)
       if (response.ok) {
         const data = await response.json()
         setUploadedImages(data.images || [])
@@ -89,11 +87,7 @@ export function SupabaseImageUpload({
 
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
-      const user = await supabaseAuth.getCurrentUser()
-      if (!user) {
-        toast.error('Please sign in to upload images')
-        return
-      }
+      const userId = "anon"
 
       // Check file size and count
       const validFiles = acceptedFiles.filter((file) => {
@@ -125,7 +119,7 @@ export function SupabaseImageUpload({
           const { file, id } = uploadingFile
           const formData = new FormData()
           formData.append('file', file)
-          formData.append('userId', user.id)
+          formData.append('userId', userId)
           formData.append('category', category)
 
           const response = await fetch('/api/upload', {
@@ -137,7 +131,7 @@ export function SupabaseImageUpload({
             const result = await response.json()
             const newImage: ImageMetadata = {
               id: result.metadata.id,
-              userId: user.id,
+              userId: userId,
               filename: result.metadata.filename,
               originalName: result.metadata.filename,
               mimeType: file.type,
@@ -182,10 +176,9 @@ export function SupabaseImageUpload({
 
   const deleteImage = async (imageId: string) => {
     try {
-      const user = await supabaseAuth.getCurrentUser()
-      if (!user) return
+      const userId = "anon"
 
-      const response = await fetch(`/api/upload?userId=${user.id}&imageId=${imageId}`, {
+      const response = await fetch(`/api/upload?userId=${userId}&imageId=${imageId}`, {
         method: 'DELETE'
       })
 
@@ -204,8 +197,7 @@ export function SupabaseImageUpload({
 
   const updateImageMetadata = async (imageId: string, updates: { description?: string; tags?: string[] }) => {
     try {
-      const user = await supabaseAuth.getCurrentUser()
-      if (!user) return
+      const userId = "anon"
 
       const response = await fetch('/api/upload', {
         method: 'PUT',
@@ -213,7 +205,7 @@ export function SupabaseImageUpload({
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          userId: user.id,
+          userId: userId,
           imageId,
           ...updates
         })

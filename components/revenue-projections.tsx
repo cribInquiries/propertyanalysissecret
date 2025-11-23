@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { DollarSign, Calendar, TrendingUp, Home, Edit3, Save, X } from "lucide-react"
 import { useEffect, useState } from "react"
-import { supabaseAuth } from "@/lib/auth/supabase-auth"
 import { supabaseDataStore } from "@/lib/supabase-data-store"
 
 export function RevenueProjections() {
@@ -57,8 +56,7 @@ export function RevenueProjections() {
   useEffect(() => {
     const loadUserAndData = async () => {
       try {
-        const user = await supabaseAuth.getCurrentUser()
-        const currentUserId = user?.id || "anon"
+        const currentUserId = "anon"
         setUserId(currentUserId)
         
         if (currentUserId !== "anon") {

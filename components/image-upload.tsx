@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { X, Upload, ImageIcon, Lock } from "lucide-react"
-import { supabaseAuth } from "@/lib/auth/supabase-auth"
 import { toast } from "@/hooks/use-toast"
 
 interface ImageUploadProps {
@@ -52,11 +51,9 @@ export function ImageUpload({
     const loadImages = async () => {
       try {
         setLoading(true)
-        const user = await supabaseAuth.getCurrentUser()
-        
-        if (!user || !user.id) {
-          setIsAuthenticated(false)
-          setUploadedImages([])
+        const userId = "anon"
+        setIsAuthenticated(true)
+        setUploadedImages([])
           return
         }
 
@@ -118,19 +115,8 @@ export function ImageUpload({
 
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
-      // Require authentication
-      const user = await supabaseAuth.getCurrentUser()
-      
-      if (!user || !user.id) {
-        toast({ 
-          title: "Authentication required", 
-          description: "Please sign in to upload images. All images are stored in your account.",
-          variant: "destructive",
-        })
-        return
-      }
-
-      const currentUserId = user.id
+      // No authentication required
+      const currentUserId = "anon"
 
       // Check file size
       const validFiles = acceptedFiles.filter((file) => {
@@ -249,16 +235,7 @@ export function ImageUpload({
 
   const removeImage = async (imageId: string) => {
     try {
-      const user = await supabaseAuth.getCurrentUser()
-      
-      if (!user || !user.id) {
-        toast({
-          title: "Authentication required",
-          description: "Please sign in to delete images",
-          variant: "destructive",
-        })
-        return
-      }
+      const userId = "anon"
 
       const currentUserId = user.id
 

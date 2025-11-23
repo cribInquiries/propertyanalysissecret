@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { MapPin, Award, Users, TrendingUp, Shield, Edit3, Save, X, Upload, Plus, Trash2 } from "lucide-react"
 import { useEffect, useState } from "react"
-import { supabaseAuth } from "@/lib/auth/supabase-auth"
 import { supabaseDataStore } from "@/lib/supabase-data-store"
 import { toast } from "@/hooks/use-toast"
 
@@ -63,8 +62,7 @@ const CompanyPortfolio = () => {
   useEffect(() => {
     const loadUserAndData = async () => {
       try {
-        const user = await supabaseAuth.getCurrentUser()
-        const currentUserId = user?.id || "anon"
+        const currentUserId = "anon"
         setUserId(currentUserId)
         
         if (currentUserId !== "anon") {
@@ -192,18 +190,8 @@ const CompanyPortfolio = () => {
     const file = event.target.files?.[0]
     if (!file) return
 
-    // Require authentication
-    const user = await supabaseAuth.getCurrentUser()
-    if (!user || !user.id) {
-      toast({
-        title: "Authentication required",
-        description: "Please sign in to upload images. All images are stored in your account.",
-        variant: "destructive",
-      })
-      return
-    }
-
-    const currentUserId = user.id
+    // No authentication required
+    const currentUserId = "anon"
 
     try {
       const form = new FormData()

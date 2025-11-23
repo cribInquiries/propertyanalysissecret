@@ -5,7 +5,6 @@ import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { EnhancedImageUpload } from './enhanced-image-upload'
-import { supabaseAuth } from '@/lib/auth/supabase-auth'
 import { imageService } from '@/lib/image-service'
 import { ImageMetadata } from '@/lib/image-service'
 import { Download, Eye, Calendar } from 'lucide-react'
@@ -21,11 +20,9 @@ export function ImageManagementDemo() {
 
   const loadUserAndImages = async () => {
     try {
-      const user = await supabaseAuth.getCurrentUser()
-      if (user?.id) {
-        setUserId(user.id)
-        await loadImages(user.id)
-      }
+      const userId = "anon"
+      setUserId(userId)
+      await loadImages(userId)
     } catch (error) {
       console.error('Error loading user:', error)
     }
